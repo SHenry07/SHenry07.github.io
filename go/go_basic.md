@@ -72,7 +72,8 @@ src/
 此工作空间包含三个代码库（goauth2、streak 和 todo），两个命令（streak 和 todo） 以及两个库
 （oauth 和 task）。
 
-# GOPATH环境变量
+##  GOPATH环境变量
+
 GOPATH 环境变量指定了你的工作空间位置。它或许是你在开发Go代码时， 唯一需要设置的环境变量。
 
 首先创建一个工作空间目录，并设置相应的 GOPATH。你的工作空间可以放在任何地方， 在此文档中我们使用 
@@ -98,9 +99,11 @@ $ export GOPATH=$HOME/work
 
 之后在自己的工作空间中建立自己的相应的包目录  类似danjgo的APP
 
+[包导入的过程](package.md)
+
 # 基本语法
 
-**格式**
+### **print家族**
 
 print将它的参数显示在命令窗口，并将输出光标定位在所显示的最后一个字符之后。
 
@@ -108,7 +111,7 @@ println 将它的参数显示在命令窗口，并在结尾加上换行符，将
 
 printf是格式化输出的形式。("%T", d)
 
-## 标签与 goto
+### 标签与 goto
 
 ```go
 package main
@@ -148,7 +151,7 @@ Here:  # 这行的第一个词,以冒号结束作为标签
 
 <u>如果您必须使用 goto，应当只使用正序的标签（标签位于 goto 语句之后），但注意标签和 goto 语句之间不能出现定义新变量的语句，否则会导致编译失败。</u>
 
-**循环**
+### **循环**
 Go 只有一种循环结构：for 循环。
 
 基本的 for 循环由三部分组成，它们用分号隔开：
@@ -183,10 +186,6 @@ if {
 }
 ```
 
-
-
-
-
 ### break
 
 循环嵌套循环时,可以在 break 后指定标签。用标签决定 哪个 循环被终止:
@@ -207,19 +206,19 @@ J: for j := 0; j < 5; j++ {
 `switch case default` 可以将长的if-then-else写的更清楚
 
 ```go
-switch 条件; var{
-case ' ', '?', '&', '=', '#', '+':  #← , as ”or”
+switch condition; var{   // confition var 都可省 可以定义在全局
+case ' ', '?', '&', '=', '#', '+':  //  用,表示 ”or”
 case "":
 default:
 }
 ```
 
-**延时调用函数(Deferred Function Calls)**
+### **延时调用函数(Deferred Function Calls)**
 
 defer 语句会将函数延迟到外层函数返回后执行,延迟的函数是按照**后进先出 (LIFO) 的顺序**执行 如果有多个defer调用 **是先进后出的顺序, 
 类似于入栈出栈一样:**
 
-**基本类型type**
+### **基本类型type**
 
 Go 的基本类型有
 
@@ -228,49 +227,68 @@ bool
 
 string
 
+//带符号:  首位0 表示- 1表示+ 
 int  int8  int16  int32  int64
+//无符号:
 uint uint8 uint16 uint32 uint64 uintptr
+
+//int是带符号的，表示范围是：-2147483648到2147483648，即-2^31到2^31次方。
+
+//uint则是不带符号的，表示范围是：2^32即0到4294967295。
 
 byte // uint8 的别名
 
 rune // int32 的别名
     // 表示一个 Unicode 码点
+uintptr	// 无符号整型，用于存放一个指针
 
 float32 float64
 
 complex64 complex128
 ```
 
-**位目运算符**
-
-<< 二进制数右移X位   相当于乘以2的X倍
-\>>二进制数左移X位   相当于除以2的X倍
-
-**逻辑运算符**
-
-&& and   || or   ! NOT
-
 **声明变量**
 一般形式是使用var关键字 `var identifier type` 也可以一次声明多个变量
 
-// 声明类型
-type 类型名 真实的type
+1. **这种因式分解关键字的写法一般用于声明全局变量**
+   
+```go
+   var (
+    vname1 v_type1
+    vname2 v_type2
+   )
+```
 
-**短变量声明**
+   声明变量同时赋值`var  s1 string = “who”`
+
+2. 类型推断(根据值推断变量类型)
+
+   `var identifier = “test”`
+
+3. **声明类型**
+   type 类型名 真实的type   // 自定义类型
+
+   > `type yourInt  = int` 类型别名 比如 rune byte 编译完还是 int32 和 uint8
+   
+ 4. **短变量声明**
 
 在函数中，简洁赋值语句 := 可在类型明确的地方代替 var 声明。
 
-vname1, vname2, vname3 := v1, v2, v3 // 出现在 := 左侧的变量不应该是已经被声明过的，否则会导致编译错误
+注意说明:
+- vname1, vname2, vname3 := v1, v2, v3 // 出现在 := 左侧的变量不应该是已经被声明过的，否则会导致编译错(即同一作用域中变量不能二次声明)
 
-// 这种因式分解关键字的写法一般用于声明全局变量
-var (
-    vname1 v_type1
-    vname2 v_type2
-)
+- **函数外的每个语句都必须以关键字开始（var, func 等等），因此 := 结构不能在函数外使用。** `:=`只用来声明临时变量, 初始化全局变量需使用`var`关键字 
 
-函数外的每个语句都必须以关键字开始（var, func 等等），因此 := 结构不能在函数外使用。
+- 局部变量声明不使用是无法编译的,全局变量可以通过
 
-**常量**
+- **定义后赋值和变量初始化的不同**
+
+  ```go
+  var n int//
+  n = 9 // 先定义，然后进行赋值操作， 在函数体外不被允许； 而`var n = 9`是变量初始化操作，在函数体外是允许的。变量初始化和变量赋值是两个不同的概念
+  ```
+
+#### 常量
 
 常量是一个简单值的标识符，在程序运行时，不会被修改的量。
 
@@ -295,13 +313,28 @@ const c_name1, c_name2 = value1, value2
 
 常量**不能用 :=** 语法声明。
 
+**数值常量**
+
+数值常量是高精度的值。
+
+一个未指定类型的常量由上下文来决定其类型。
+
+再尝试一下输出 needInt(Big) 吧。
+
+（int 类型最大可以存储一个 64 位的整数，有时会更小。）
+
+（int 可以存放最大64位的整数，根据平台不同有时会更少。）
+
+**赋值可以用八进制、十六进制或科学计数法: 077 , 0xFF , 1e3 或者 6.022e23 这些都
+是合法的。**
+
 ### 枚举
 iota，特殊常量，可以认为是一个可以被编译器修改的常量。
 
-iota 在 const关键字出现时将被重置为 0(const 内部的第一行之前)，const 中每新增一行常量声明将使 iota 计数一次(iota 可理解为 const 语句块中的行索引)。 可以使用 iota 生成枚举值
+iota 在 **const关键字出现时将被重置为 0(const 内部的第一行之前)**，const 中每**新增一行常量声明**将使 iota 计数一次(iota 可理解为 const 语句块中的行索引)。 可以使用 iota 生成枚举值
 `const (
-a = iota
-b = iota
+a = iota //0
+b = iota //1
 )`
 
 省略 Go 重复的 = iota
@@ -316,66 +349,124 @@ a = 0        ← Is an int now
 b string = "0"
 )`
 
+### 字符串
+
+Go语言中字符串是用双引号""包裹的
+
+字符使用单引号''包裹的
+
 ```go
-const (
-            a = iota   //0
-            b          //1
-            c          //2
-            d = "ha"   //独立值，iota += 1
-            e          //"ha"   iota += 1
-            f = 100    //iota +=1
-            g          //100  iota +=1
-            h = iota   //7,恢复计数
-            i          //8
-    )
-    fmt.Println(a,b,c,d,e,f,g,h,i)
-}
-以上实例运行结果为：
-
-0 1 2 ha ha 100 100 7 8
-
-const (
-    i=1<<iota
-    j=3<<iota
-    k
-    l
-)
-
-以上实例运行结果为：
-
-i= 1
-j= 6
-k= 12
-l= 24
-iota 表示从 0 开始自动加 1，所以 i=1<<0, j=3<<1（<< 表示左移的意思），即：i=1, j=6，这没问题，关键在 k 和 l，从输出结果看 k=3<<2，l=3<<3。
-
-简单表述:
-
-i=1：左移 0 位,不变仍为 1;
-j=3：左移 1 位,变为二进制 110, 即 6;
-k=3：左移 2 位,变为二进制 1100, 即 12;
-l=3：左移 3 位,变为二进制 11000,即 24。
+// 字符串
+s := "Hello"
+// 单独的字母、汉字、符号表示一个字符
+c1 := 'h'
+c2 := '1'
+c3 := '中'
+// 1字节(Byte） = 8位(bit)
+// 一个字符'A' = 1个字节
+// 1个utf8编码的汉字 = 一般占3个字节
 ```
 
+#### 多行字符串
 
+Go语言中要定义一个多行字符串时，就必须使用`字符：
+
+```go
+s1 := `第一行
+第二行
+第三行
+`
+fmt.Println(s1)
+```
+
+反引号间换行   将被作为字符串中的换行，所有的转义字符均无效，文本将会原样输出。
+
+#### 字符串的常用操作
+
+|                方法                 |             介绍              |
+| :---------------------------------: | :---------------------------: |
+|              len(str)               |            求长度             |
+|           +或fmt.Sprintf            |          拼接字符串           |
+|            strings.Split            |             分割              |
+|          strings.contains           |         判断是否包含          |
+| strings.HasPrefix/strings.HasSuffix |         前缀/后缀判断         |
+| strings.Index()/strings.LastIndex() | 子串出现的位置/最后出现的位置 |
+| strings.Join(a[]string, sep string) |  join操作(连接操作类似拼接)   |
+
+## byte和rune类型
+
+组成每个字符串的元素叫做“字符”，可以通过遍历或者单个获取字符串元素获得字符。 字符用单引号（’）包裹起来，如：
+
+```go
+var a := '中'
+var b := 'x'
+```
+
+Go 语言的字符有以下两种：
+
+1. `uint8`类型，或者叫 byte 型，代表了`ASCII码`的一个字符。
+2. `rune`类型，代表一个 `UTF-8字符`。
+
+当需要处理中文、日文或者其他复合字符时，则需要用到`rune`类型。`rune`类型实际是一个`int32`。
+
+Go 使用了特殊的 rune 类型来处理 Unicode，让基于 Unicode 的文本处理更为方便，也可以使用 byte 型进行默认字符串处理，性能和扩展性都有照顾。
+
+```go
+// 遍历字符串
+func traversalString() {
+	s := "hello沙河"
+	for i := 0; i < len(s); i++ { //byte
+		fmt.Printf("%v(%c) ", s[i], s[i])
+	}
+	fmt.Println()
+	for _, r := range s { //rune
+		fmt.Printf("%v(%c) ", r, r)
+	}
+	fmt.Println()
+}
+```
+
+输出：
+
+```bash
+104(h) 101(e) 108(l) 108(l) 111(o) 230(æ) 178(²) 153() 230(æ) 178(²) 179(³) 
+104(h) 101(e) 108(l) 108(l) 111(o) 27801(沙) 27827(河) 
+```
+
+因为UTF8编码下一个中文汉字由3~4个字节组成，所以我们不能简单的按照字节去遍历一个包含中文的字符串，否则就会出现上面输出中第一行的结果。
+
+字符串底层是一个byte数组，所以可以和`[]byte`类型相互转换。字符串是不能修改的 字符串是由byte字节组成，所以字符串的长度是byte字节的长度。 rune类型用来表示utf8字符，一个rune字符由一个或多个byte组成。
+
+## 运算符
+
+### 算术运算符
+
+a ++
+
+b -- 是一个单独的语句,不能像python一样放在=的右边进行赋值
+
+### 关系运算符
+
+### 位目运算符
+
+&   与  00 0  01  0  11 1  （两位均为1才为1）
+
+|  或     00 0  01 1   11 1    （两位有一个为1就为1）  
+
+^ 异或00 0  01  1   11 0  （两位不一样则为1）
+
+<< 二进制数右移X位   相当于乘以2的X倍
+\>>二进制数左移X位   相当于除以2的X倍
+
+### 逻辑运算符
+
+&& and   || or   ! NOT
+
+### 赋值运算符
 
 ------
-**数值常量**
 
-数值常量是高精度的 值。
-
-一个未指定类型的常量由上下文来决定其类型。
-
-再尝试一下输出 needInt(Big) 吧。
-
-（int 类型最大可以存储一个 64 位的整数，有时会更小。）
-
-（int 可以存放最大64位的整数，根据平台不同有时会更少。）
-
-**赋值可以用八进制、十六进制或科学计数法: 077 , 0xFF , 1e3 或者 6.022e23 这些都
-是合法的。**
-
-类型别名得到的新类型并非和原类型完全相同，新类型不会拥有原类型所附带的方法
+### 类型别名得到的新类型并非和原类型完全相同，新类型不会拥有原类型所附带的方法
 
 # 内存操作
 
@@ -419,6 +510,12 @@ new 分配;make 初始化
 
 - make(T) 返回初始化后的 T
   当然 make 仅适用于 slice,map 和 channel。
+  
+  另外一种总结方式：
+  
+  1. make 和new都是用来申请内存的
+  2. new很少用，一般用来给基本数据类型申请内存,string、int返回的是对应类型的指针(\*string,\*int)
+  3. make 是用来给slice，map和channel申请内存的,make函数返回的是对应的这三个类型本身
 
 
 - var p1 Person 分配了 Person - 值 给 p1 。 p1 的类型是 Person 。
@@ -439,38 +536,62 @@ new 分配;make 初始化
 
 # 进阶结构
 
-## **结构体structs**约等于函数
-
-结构体就是一组字段(field)
-
-字段可以用.(dot)来访问
-
-**结构体指针Pointers to structs**
-
-(*p).X 语言允许隐式间接引用，直接写 p.X 就可以。
-
 ## **Array 数组**
 
 [n]T 表示拥有n个T类型的值的数组  var a [10]int    a为有10个整数的数组
 
-> 数组的长度是其 类型的一部分，因此数组不能改变大小
+> **数组的长度是其 '类型'的一部分**，因此数组不能改变大小
+>
+> 数组是值类型,赋值和传参会复制整个数组。因此改变副本的值，不会改变本身的值。
+
+初始化方式:
+
+```go
+ var a [5]int
+    fmt.Println("emp:", a)
+    a[4] = 100
+    fmt.Println("set:", a)
+var XX = [3]bool{true,true,true}
+var XX = [...]int{0,23,2315,666,7777}
+var XX = [5]int{0 : 1, 4 : 2}   //--> [1,0,0,0,2]
+b := [5]int{1, 2, 3, 4, 5}
+```
+
+多维数组
+```go
+var XX [3][2]int
+XX = {
+   <[2]int可省>{1,2}，
+   {3,4},
+   {5,6},
+}
+```
+注意： 多维数组只有第一层(最外围数组)可以使用`...`来让编译器推导数组长度。
+
 
 ## **切片slices**
 
-[]T 表示一个元素类型为T的切片。 切片通过两个下标来界定，即一个上届和一个下届，二者以:为分隔符
-a[low : hight]
+[]T 表示一个元素类型为T的切片。
+
+切片的本质就是对底层数组的封装,包含了**底层数组的指针，长度，容量**
+
+切片通过两个下标来界定，即一个上届和一个下届，二者以:为分隔符a[low : hight]
+
+### 左闭右开 
 
 类似一个半开区间[0,n) 包含第一个元素，不包含最后一个元素a[1:4] 表示1~3
 
-切片就像数组的引用 只是描述底层数组中的一段
+**切片就像数组的引用 只是描述底层数组中的一段** (注意:引用)
 
 但是更改切片的元素 **会修改**其底层数的组中的元素，与它共享的数组的切片都会引用新的修改
 
-**切片语法slice literals**
+### 切片语法slice literals
 
 This is an array literals `[3]bool{true,true,false}`
 
 This is a slice literals `[]bool{true,true,false}`
+
+**注意[n]T和[]T是数组和切片声明方式的不同** 
 
 切片看起来像创建一个和上面一模一样的数组，然后引用了它,所以切片的语法类似与no length的数组语法
 
@@ -480,10 +601,10 @@ This is a slice literals `[]bool{true,true,false}`
 
 1. 切片拥有length 和 capacity 容量
 
-切片的长度就是the number of elements it contains
+**切片的长度就是the number of elements it contains**
 
 切片的容量是 the number of elements in the underlying底层,counting from  the first elements in the slice
-从其第一个元素开始数，到其底层数组元素末尾的个数
+**从其第一个元素开始数，到其底层数组元素末尾的个数**
 
 切片s的长度和容量可通过表达式len(s) 和 cap(s) 来获取
 
@@ -491,17 +612,26 @@ This is a slice literals `[]bool{true,true,false}`
 
 2. 切片的零值是 nil。
 
-nil 切片的长度和容量为 0 且没有底层数组。
+- 切片之间不能比较
+- nil 切片的长度和容量为 0 且没有底层数组。
+- 因为`s3 := make(int[],0)  //len(s3)=0;cap(s3)=0;s3!=nil`所以要判断一个切片是否是空的，要是用`len(s) == 0`来判断，不应该使用`s == nil`来判断。
 
-**用make函数创建切片creating s slice with make**
+#### 切片的扩容策略
+
+1. 如果申请的容量大于原来的2倍,那就直接扩容至新申请的容量
+2. 如果数组原容量小于1024，那就直接2倍
+3. 如果数组原容量大于1024，那就以原容量的1/4循环扩容
+4. 具体存储的值类型不同，扩容策略也有部分不同
+
+### **用make函数创建切片creating s slice with make**
 
 内建函数make来创建动态数组
 
-make函数会分配一个元素为零值的数组并返回一个引用了它的切片
-`a := make([]int, 5)` // len(a)=5
+make函数会分配一个**元素为零值**的**数组**并**返回**一个**引用了它的切片** 特别注意 是0
+`a := make([]int, 5)` // len(a)=5  make返回的切片 [0,0,0,0,0]
 
 要指定它的容量，需向make传入第三个参数:
-`b := make([]int, 0, 5) `// len(b)=0
+`b := make([]int, 0, 5) `// len(b)=0                                                      
 
 `b = b[:cap(b)]` // len(b)=5 cap(b)=5
 
@@ -511,9 +641,17 @@ make函数会分配一个元素为零值的数组并返回一个引用了它的�
 
 切片的切片: 切片可包含任何类型，包括其他切片详见slice-of-slice.go
 
-**向切片追加元素 appending to a slice**
+### 向切片追加元素 appending to a slice
 
 `func append(s []T, vs .....T) []T`
+
+`s1 = append(s1, "广州")`
+
+```go
+ss := []string{"武汉","西安","苏州"}
+
+s1 = append(s1, ss...)  // ...表示拆开
+```
 
 Go 提供了内建的append 函数，append 第一个参数s是一个元素类型为T的切片 T 可以是int string  其余的T类型会追加到切片的末尾
 
@@ -521,17 +659,60 @@ append 的结果是一个包含原切片所有元素加上新添加元素的切�
 
 当s的底层数组太小，不足以容纳所有给定的值时,它就会分配一个更大的数组。返回的切片会指向这个新分配的数组
 
+### copy 复制切片
+
+`func copy (dst []Type, src []Type) int`
+
+详见slice.md
+
+### 切片与数组的关系
+
+1. 切片不保存具体的值，是一个引用
+
+2. 切片一定对应一个底层数组,(make 也是先申请数组空间再返回切片)
+
+3. 底层数组占有一块连续的内存
+
+### 传递不定长值的例子
+```go
+package main
+import "fmt"
+
+func MaxSubseqSum1 (seq ...int64) (M int64) {  thisnum , maxnum := 0,0}
+
+func main() {   
+   var slice = []int64{3,-1,5,-2,3,4,-5,2,4,-1}   
+   MaxNum := MaxSubseqSum1(slice...) 
+   fmt.Println(MaxNum)
+}
+```
+
 ## **映射Maps**
 
-map 将keys 映射到 values
+map 将keys 映射到 values `map[KeyType]ValueType`
 
-a map 的零值为nil 一个nil map 没有keys 也不能添加keys 
+其中
+
+- `KeyType`表示键的类型
+
+- `ValueType`表示键对应的值的类型
+
+map类型的变量初始值为nil,需要使用make()函数来分配内存，语法为:`make(map[KeyType]ValueType),[cap])`
+其中cap表示map的容量,该参数虽然不是必须的,但是我们应该在初始化map的时候就为其制定一个合适的容量
+
+一个map 的零值为nil 一个nil map 没有keys 也不能添加keys 
 
 make 函数返回给定类型的map 初始化和ready for use
 
 map 的语法与struct类似 但是必须有键名keys
 
 若顶级类型只是一个类型名，你可以在文法的元素中省略它。
+
+**如果不存在这个key，返回这个key键的类型的零值**
+
+### 删除
+
+`delete(map, key)`
 
 #### **for 循环的 range 形式可遍历切片或者映射**
 
@@ -544,17 +725,111 @@ for i, _ := range pow  // 只要下标key  写成 for i := range pow 也可
 for  _, value := range pwo // 只要值
 ```
 
+## **结构体structs**约等于函数
+
+结构体就是一组字段(field)
+
+```go
+type person {
+    name stting
+    age  int 
+    gender bool
+    city string
+} // type:main.person
+```
+
+字段可以用.(dot)来访问
+
+```go
+// 匿名结构体 多用于临时场景
+var person struct {
+    name stting
+    age  int 
+    gender bool
+    city string
+} // type:struct
+```
+
+**结构体指针Pointers to structs**
+
+(*p).X 语言允许隐式间接引用，直接写 p.X 就可以。
+
+### 创建指针类型结构体
+
+我们还可以通过使用`new`关键字对结构体进行实例化，得到的是结构体的地址。 格式如下：
+
+```go
+var p2 = new(person)
+fmt.Printf("%T\n", p2)     //*main.person
+fmt.Printf("p2=%#v\n", p2) //p2=&main.person{name:"", city:"", age:0}
+```
+
+从打印的结果中我们可以看出`p2`是一个结构体指针。
+
+需要注意的是在Go语言中支持对结构体指针直接使用`.`来访问结构体的成员。
+
+```go
+var p2 = new(person)
+p2.name = "小王子"
+p2.age = 28
+p2.city = "上海"
+fmt.Printf("p2=%#v\n", p2) //p2=&main.person{name:"小王子", city:"上海", age:28}
+```
+
+### 取结构体的地址实例化
+
+使用`&`对结构体进行取地址操作相当于对该结构体类型进行了一次`new`实例化操作。
+
+```go
+p3 := &person{}
+fmt.Printf("%T\n", p3)     //*main.person
+fmt.Printf("p3=%#v\n", p3) //p3=&main.person{name:"", city:"", age:0}
+p3.name = "七米"
+p3.age = 30
+p3.city = "成都"
+fmt.Printf("p3=%#v\n", p3) //p3=&main.person{name:"七米", city:"成都", age:30}
+```
+
+`p3.name = "七米"`其实在底层是`(*p3).name = "七米"`，这是Go语言帮我们实现的语法糖。
+
+ [额外的扩展-与json](struct.md)
+
+`json.Marshal(c1)``json.Unmarshal([]byte(str), &c1)`
+
+注意：1. 结构体中的变量名字 首字母应该为 大写 2.反序列化时应该传指针
+
+【进阶知识点】关于Go语言中的内存对齐推荐阅读:[在 Go 中恰到好处的内存对齐](https://segmentfault.com/a/1190000017527311?utm_campaign=studygolang.com&utm_medium=studygolang.com&utm_source=studygolang.com) 
+
+
+### 结构体初始化
+
+```go
+type person struct {
+	name  string
+	age   int
+}
+var p1 person //结构体实例化
+p1.name = "周林"
+p1.age  = 9000
+
+p2 := person{"邢浩杰",18} // 结构体实例化
+
+p4 := newPerson("邱骥"，36) // 调用构造函数生成person类型变量
+```
+
+
+
 # Func函数,一等公民
 
 type mytype int  ← type声明新的类型
-func (p mytype) funcname(q int) (r,s int) { return 0,0 }
+func (p mytype) func name(q int) (r,s int) { return 0,0 }
 0           1    	               2                3           4              5
 
 - 0 关键字 func 用于定义一个函数;
 - 1 函数可以绑定到特定的类型上。这叫做 接收者 。有接收者的函数被称作 method。
 - 2 funcname 是你函数的名字
 - 3 int 类型的变量 q 作为输入参数。参数用 pass-by-value 方式传递,意味着它们会被复制;
-- 4 变量 r 和 s 是这个函数的 命名返回值。
+- 4 变量 r 和 s 是这个函数的 命名返回值。// 返回参数
 - 5 这是函数体。注意 return 是一个语句,所以包裹参数的括号是可选的
 
 ## 匿名函数
@@ -585,24 +860,29 @@ func f() (ret int) {  //← ret 被初始化为零
 }
 ```
 
-## 变参
+## 变参/可变长参数
+
 接受不定数量的参数的函数叫做变参函数。为了使其接受变参需要进行如下定义:
 `func myfunc(arg ...int) {}`
 
 `arg ... int` 告诉 Go 这个函数接受不定数量的参数。注意,这些参数的类型全部是
-`int` 。在函数体中,变量 `arg` 是一个 int 类型的 slice:
+`int` ,可以为空也就是一个也不传入 。在函数体中,变量 `arg` 是一个 int 类型的 slice:
 
 `func prtthem(numbers ... int) {} // numbers 现在是整数类型的 slice`
 
 ### 如何传入变参
+
 ```go
 slice := []int{1,2,3,45,6}
 prtthem(slice...)
 ```
 ### 疑问
+
 s ...string
 s []string 
 有何不同
+
+尝试解答: ...string可以为空  []string必须要传入切片
 
 ## 函数值
 
@@ -675,20 +955,21 @@ var xs = map[int]func() int{
 # Methods 方法
 
 GO 没有类 A method is a function with a special ***receiver***
-方法就是一类带特殊的 **接受者/参数**的函数
+方法就是一类带特殊的 **接受者/参数**的函数，作用于特定类型的函数
 
 > The receiver 在自己的参数列表内 位于func关键字和the method name方法名之间
 
 可以在任意类型上定义方法(cd除了非本地类型,包括内建类型: int 类型不能有方法)。然而可以新建一个拥有方法的整数类型。
+**约定成俗: 多用类型名首字母小写表示**
 
 1. 可以为结构体类型定义方法
-`func (v Vertex) Abs() float64 {}` **Abs method 方法abs** has 一个名为v类型type 为Vertex的接受者
+    `func (v Vertex) Abs() float64 {}`
 
-方法abs 
+   **Abs method 方法abs** has 一个名为v类型，type 为Vertex的接受者
 
-regular function `func Abs(v Vertex) float64 {}` 效果是一样的
+方法abs 与regular function `func Abs(v Vertex) float64 {}` 效果是一样的
 
-2. 你也可以为非结构体类型声明方法`func (f MyFloat) Abs() float64 {`
+2. 你也可以为非结构体类型声明 method方法`func (f MyFloat) Abs() float64 {}`
 
 接收者的类型定义和方法声明必须在同一包内；更不能为内建类型声明方法(such as int)
 
@@ -721,7 +1002,7 @@ regular function `func Abs(v Vertex) float64 {}` 效果是一样的
 # 接口 Interfaces
 
 An ***interface type*** is defined as a set of method signatures
-接口类型 是由**一组**方法签名定义的集合
+接口**类型** 是由**一组**方法签名定义的集合
 
 隐式实现
 
@@ -748,7 +1029,9 @@ An ***interface type*** is defined as a set of method signatures
 
 **空接口被用来处理未知类型的值。例如，fmt.Print 可接受类型为 interface{} 的任意数量的参数。**
 
-# 类型断言 Type assertions
+[额外的解释](interface.md)
+
+## 类型断言 Type assertions
 
 A type assertions 可以访问  接口值的底层具体值
 
@@ -766,7 +1049,7 @@ A type assertions 可以访问  接口值的底层具体值
 
 >请注意这种语法和读取一个映射时的相同之处。
 
-## 类型选择
+### 类型选择
 
 一种按顺序从几个类型断言中选择分支的结构.与一般的switch语句相似,不过case为类型(int float64)
 
@@ -782,47 +1065,7 @@ default:
 ```
 
 类型选择中的声明与类型断言i.(T)的语法相同只不过把 具体类型T换成了keyword `type`
-
-# panic 和 recover 恐慌和恢复
-
-## Panic
-是一个内建函数,可以中断原有的控制流程,进入一个令人恐慌的流程中。当函
-数 F 调用 panic ,函数 F 的执行被中断,并且 F 中的延迟函数会正常执行,然后
-F 返回到调用它的地方。在调用的地方, F 的行为就像调用了 panic 。这一过程
-继续向上,直到当前的 goroutine 返回,这时程序崩溃。
-恐慌可以直接调用 panic 产生。也可以由运行时错误产生,例如访问越界的数
-组。
-
-## Recover
-
-是一个内建的函数,可以让进入令人恐慌的流程中的 goroutine 恢复过来。 recover
-仅 在延迟函数中有效。在正常的执行过程中,调用 recover 会返回 nil 并且没
-有其他任何效果。如果当前的 goroutine 陷入恐慌,调用 recover 可以捕获到
-panic 的输入值,并且恢复正常的执行。
-
-```go
-//这个函数检查作为其参数的函数在执行时是否会产生 panic c :
-func throwsPanic(f func()) (b bool) { 0
-	defer func() { 1
-		if x := recover(); x != nil {
-			b = true
-		}
-	}()
-	f() 2
-	return 3
-}
-```
-0 定义一个新函数 throwsPanic
-接受一个函数作为参数 (参看“函数作为值”)。
-函数 f 产生 panic,就返回 true,否则返回 false;
-1 定义了一个利用 recover 的 defer 函数。
-如果当前的 goroutine 产生了 panic,这个 defer 函数能够发现。
-当 recover() 返回非 nil 值,设置 b 为 true;
-2 调用作为参数接收的函数;
-3 返回 b 的值。由于 b 是命名返回值(第 28 页)
-,因此无须指定 b 。
-
-# 常见包中的接口
+## 常见包中的接口
 
 1. fmt 包中定义的 Stringer 是最普遍的接口之一。
 
@@ -879,11 +1122,52 @@ type Image interface {
 
 `color.Color` 和 `color.Model` 类型也是接口，但是通常因为直接使用预定义的实现 `image.RGBA` 和 `image.RGBAModel` 而被忽视了。这些接口和类型由 [`image/color`](https://go-zh.org/pkg/image/color/) 包定义。
 
+## 反射 reflect
+
+待补充
+
+# panic 和 recover 恐慌和恢复
+
+## Panic
+是一个内建函数,可以中断原有的控制流程,进入一个令人恐慌的流程中。当函
+数 F 调用 panic ,函数 F 的执行被中断,并且 F 中的延迟函数会正常执行,然后
+F 返回到调用它的地方。在调用的地方, F 的行为就像调用了 panic 。这一过程
+继续向上,直到当前的 goroutine 返回,这时程序崩溃。
+恐慌可以直接调用 panic 产生。也可以由运行时错误产生,例如访问越界的数
+组。
+
+## Recover
+
+是一个内建的函数,可以让进入令人恐慌的流程中的 goroutine 恢复过来。 recover
+仅 在延迟函数中有效。在正常的执行过程中,调用 recover 会返回 nil 并且没
+有其他任何效果。如果当前的 goroutine 陷入恐慌,调用 recover 可以捕获到
+panic 的输入值,并且恢复正常的执行。
+
+```go
+//这个函数检查作为其参数的函数在执行时是否会产生 panic c :
+func throwsPanic(f func()) (b bool) { 0
+	defer func() { 1
+		if x := recover(); x != nil {
+			b = true
+		}
+	}()
+	f() 2
+	return 3
+}
+```
+- 0 定义一个新函数 throwsPanic
+  接受一个函数作为参数 (参看“函数作为值”)。函数 f 产生 panic,就返回 true,否则返回 false;
+- 1 定义了一个利用 recover 的 defer 函数。
+  如果当前的 goroutine 产生了 panic,这个 defer 函数能够发现。当 recover() 返回非 nil 值,设置 b 为 true;
+- 2 调用作为参数接收的函数;
+- 3 返回 b 的值。由于 b 是命名返回值(第 28 页),因此无须指定 b 。
+
+
 # Go程和channel
 
-## go routine
+## goroutine
 
-是由Go运行时管理的轻量级线程.
+是由Go运行时管理的轻量级线程.工作在用户态
 
 ```
 go f(x, y, z)
@@ -899,6 +1183,24 @@ f(x, y, z)
 
 > goroutine 可能是按照从下往上的执行顺序来的，不确定待考察
 
+### M:N
+将m个goroutine调度到n个操作系统线程上,n默认是操作系统的逻辑核心数
+
+### 可增长的栈
+
+OS线程（操作系统线程）一般都有固定的栈内存（通常为2MB）,一个`goroutine`的栈在其生命周期开始时只有很小的栈（典型情况下2KB），`goroutine`的栈不是固定的，他可以按需增大和缩小，`goroutine`的栈大小限制可以达到1GB，虽然极少会用到这个大。所以在Go语言中一次创建十万左右的`goroutine`也是可以的。
+
+### 调度模型
+
+**GPM是Go语言运行时（runtime）层面的实现，是go语言自己实现的一套调度系统。区别于操作系统调度OS线程。**
+
+- G很好理解，就是个goroutine的，里面除了存放本goroutine信息外 还有与所在P的绑定等信息。
+- P管理着一组goroutine队列，P里面会存储当前goroutine运行的上下文环境（函数指针，堆栈地址及地址边界），P会对自己管理的goroutine队列做一些调度（比如把占用CPU时间较长的goroutine暂停、运行后续的goroutine等等）当自己的队列消费完了就去全局队列里取，如果全局队列里也消费完了会去其他P的队列里抢任务。
+- M（machine）是Go运行时（runtime）对操作系统内核线程的虚拟， M与内核线程一般是一一映射的关系， 一个goroutine最终是要放到M上执行的；
+  P与M一般也是一一对应的。他们关系是： P管理着一组G挂载在M上运行。当一个G长久阻塞在一个M上时，runtime会新建一个M，阻塞G所在的P会把其他的G 挂载在新建的M上。当旧的G阻塞完成或者认为其已经死掉时 回收旧的M。
+
+P的个数是通过`runtime.GOMAXPROCS`设定（最大256），Go 1.5版本之后默认为物理线程数。 在并发量大的时候会增加一些P和M，但不会太多，切换太频繁的话得不偿失。
+
 ## Channel信道
 
 信道是带有类型的管道，你可以通过它用信道操作符 `<-` 来发送或者接收值。
@@ -907,11 +1209,13 @@ f(x, y, z)
 ```go
 ch <- v    // 将 v 发送至信道 ch。
 v := <-ch  // 从 ch 接收值并赋予 v。
-ci <- 1    // 发送 整数 1 到 channel ci
-<- ch      // 等待, 直到从channel上接收到一个值
+<- ch      // 等待, 直到从channel上接收到一个值，值被忽略
+ci <- 1    // 发送 整数 1 到 channel c
+close(ch)  // 关闭  关闭后的通道还是可以取值,取完之后返回的是类型零值
 ```
 
 （“箭头”就是数据流的方向。）
+Go语言的并发模型是`CSP（Communicating Sequential Processes）`，提倡**通过通信共享内存**而不是**通过共享内存而实现通信**。
 
 ### Channel类型
 
@@ -925,6 +1229,7 @@ ChannelType = ( "chan" | "chan" "<-" | "<-" "chan" ) ElementType .
 
 ```go
 chan T          // 可以接收和发送类型为 T 的数据
+// 单项通道
 chan<- float64  // 只可以用来发送 float64 类型的数据
 <-chan int      // 只可以用来接收 int 类型的数据
 ```
@@ -937,6 +1242,8 @@ chan<- <-chan int  // 等价 chan<- (<-chan int)
 <-chan <-chan int  // 等价 <-chan (<-chan int)
 chan (<-chan int)
 ```
+
+![channel异常总结](E:/banksteel/simple-ci-description.wiki/images/channel01.png)
 
 和映射与切片一样，信道在使用前必须创建：
 
@@ -956,9 +1263,13 @@ ch := make(chan int, 100)
 
 缓冲区填满后继续发送会抛出`fatal error: all goroutines are asleep - deadlock!`错误
 
-### range 和 close
+uber的代码建议:要不使用无缓冲通道,要不使用缓冲为1的channel 
 
-发送者可通过 `close` 关闭一个信道来表示没有需要发送的值了。接收者可以通过为接收表达式分配第二个参数来测试信道是否被关闭：若没有值可以接收且信道已被关闭，那么在执行完
+### close和 如何判断一个channel已经关闭(range)  
+
+发送者可通过 `close` 关闭一个信道来表示没有需要发送的值了。
+
+1. 接收者可以通过为接收表达式分配第二个参数来测试信道是否被关闭：若没有值可以接收且信道已被关闭，那么在执行完
 
 ```
 v, ok := <-ch
@@ -966,9 +1277,11 @@ v, ok := <-ch
 
 之后 `ok` 会被设置为 `false`。
 
-循环 `for i := range c` 会不断从信道接收值，直到它被关闭。
+2. 循环 `for i := range c` 会不断从信道接收值，直到它被关闭。
 
-*注意：* 只有发送者才能关闭信道，而接收者不能。向一个已经关闭的信道发送数据会引发程序恐慌（panic）。
+***注意：* 只有发送者才能关闭信道，而接收者不能。向一个已经关闭的信道发送数据会引发程序恐慌（panic）。**
+
+**关闭一个已经关闭的`channel`也会引发panic**
 
 *还要注意：* 信道与文件不同，通常情况下无需关闭它们。只有在必须告诉接收者不再有需要发送的值时才有必要关闭，例如终止一个 `range` 循环。
 
@@ -978,7 +1291,7 @@ v, ok := <-ch
 
 `select` 会阻塞到某个分支可以继续执行为止，这时就会执行该分支。当**多个分支都准备好**时会随机选择一个执行。
 
- `select`语句选择一组可能的send操作和receive操作去处理。它类似`switch`,但是只是用来处理通讯(communication)操作。
+ `select`语句选择**一组可能的send操作和receive操作**去处理。它类似`switch`,但是只是用来处理通讯(communication)操作。
 -  它的`case`可以是send语句，也可以是receive语句，亦或者`default`。
 
 - `receive`语句可以将值赋值给一个或者两个变量。它必须是一个receive操作。
@@ -993,7 +1306,7 @@ v, ok := <-ch
 
 它可以用来检查Channel是否已经被关闭了。
 
-### 默认选择
+#### 默认选择
 
 如果没有case需要处理，则会选择`default`去处理，如果`default case`存在的情况下。如果没有`default case`，则`select`语句会阻塞，直到某个case需要处理。
 
@@ -1023,7 +1336,7 @@ func main() {
 }
 ```
 
-## sync.Mutex
+## sync.Mutex互斥锁
 
 我们已经看到信道非常适合在各个 Go 程间进行通信。
 
@@ -1040,12 +1353,80 @@ Go 标准库中提供了 [`sync.Mutex`](https://go-zh.org/pkg/sync/#Mutex) 互�
 
 我们也可以用 `defer` 语句来保证互斥锁一定会被解锁。参见 `Value` 方法。
 
-# 没找到合适的位置
-只要在代码集中执行 go vet，就可以发现所有的无标签的语法
+### 值类型
+
+`sync.Mutex`是一个结构体,是值类型，给函数传参属的时候要传指针
+
+## 读写互斥锁
+
+#### 应用场景
+
+适用于读多写少场景
+
+#### 特点
+
+1. read goroutine拿到RLock，后续的goroutine能读不能写
+2. write goroutine拿到Lock, 后续的goroutine不管是read是wirte都要等待
+
+## sync.WaitGroup
+
+用来等goroutine执行完再继续
+
+详见package/sync.md
+
+## sync.Map
+
+详见package/sync.md
+
+## sync.Atomic 原子操作
+
+详见package/sync.md
+
+# Testing测试
+
+## 单元测试
+测试函数需要以`Test目标函数`开头
+
+## 基准测试
+
+## 示例函数
+
+## Setup和Teardown
+
+setup准备环境
+
+teardown拆解环境
+
+# pprof调试工具
+
+
+
+
+
+# go 的命令行操作
+
+1. 只要在代码集中执行 go vet，就可以发现所有的无标签的语法
+
+2. `go test`
+
+   ```go
+   go test
+   go test -v
+   go test -run=RegExp  // 例如-run="More"  
+   go test -v -run=Split/simple  // 子测试t.Run()
+   go test -cover
+   go test -cover -coverprofile=c.out
+   // 扩展
+   go tool cover -html=c.out
+   // 基准测试
+   go test -bench=Split -benchmem
+   ```
+
+   
 
 # 经典应用
 
-1. 空白标识符_在函数返回值时的使用
+### 1. 空白标识符_在函数返回值时的使用
 
 ```go
 package main
@@ -1066,7 +1447,7 @@ func numbers()(int,int,string){
 
 输出结果: 2 str
 
-2. 函数作为参数传递，实现回调。
+### 2. 函数作为参数传递，实现回调。
 
 ```go
 package main
@@ -1099,7 +1480,7 @@ func callBack(x int) int {
 
 我是回调，2
 
-3. 练习ERROR
+### 3. 练习ERROR
 
    从[之前的练习](https://tour.go-zh.org/flowcontrol/8)中复制 `Sqrt` 函数，修改它使其返回 `error` 值。
 
@@ -1147,9 +1528,9 @@ func callBack(x int) int {
    在 `Error` 方法内调用 `fmt.Sprint(e)` 会让程序陷入死循环。可以通过先转换 `e` 来避免这个问题：`fmt.Sprint(float64(e))`。这是为什么呢？
 
    解: ErrNegativeSqrt 也是type 类似与int和string 不转换的话等于调用e本身的函数
-   
-   4. 从未排序的切片中移除元素的有效方法
-   
+
+### 4. 从未排序的切片中移除元素的有效方法
+
       ```go
       package main 
       func main() {
@@ -1166,10 +1547,31 @@ func callBack(x int) int {
         return source[:lastIndex]
       }
       ```
-   
-      
+### 5 interface的妙用,判断传入的类型
+```go
+package main
 
-# 方法调用和函数调用的区别
+import "fmt"
+
+func do(i interface{}) {
+	switch v := i.(type) {
+	case int:
+		fmt.Printf("Twice %v is %v\n", v, v*2)
+	case string:
+		fmt.Printf("%q is %v bytes long\n", v, len(v))
+	default:
+		fmt.Printf("I don't know about type %T!\n", v)
+	}
+}
+
+func main() {
+	do(21)
+	do("hello")
+	do(true)
+}
+```
+
+# method调用和function调用的区别
 
 可以对新定义的类型创建函数以便操作,可以通过两种途径:
 1. 创建一个函数接受这个类型的参数。
