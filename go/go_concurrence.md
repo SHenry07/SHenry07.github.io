@@ -1,3 +1,15 @@
+### Concurrency vs. parallelism
+
+Concurrency is about dealing with lots of things at once.
+
+Parallelism is about doing lots of things at once.
+
+Not the same, but related.
+
+Concurrency is about structure, parallelism is about execution.
+
+Concurrency provides a way to structure a solution to solve a problem that may (but not necessarily) be parallelizable.
+
 ## goroutine与线程
 
 ### 可增长的栈
@@ -79,6 +91,8 @@ Go语言中的操作系统线程和goroutine的关系：
 1. 一个操作系统线程对应用户态多个goroutine。
 2. go程序可以同时使用多个操作系统线程。
 3. goroutine和OS线程是多对多的关系，即m:n。
+
+在一个协程中，比如它需要进行非常密集的运算，你可以在运算循环中周期的使用 `runtime.Gosched()`：这会让出处理器，允许运行其他协程；它并不会使当前协程挂起，所以它会自动恢复执行。使用` Gosched() `可以使计算均匀分布，使通信不至于迟迟得不到响应。
 
 ## channel
 

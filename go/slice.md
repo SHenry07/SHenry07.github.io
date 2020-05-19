@@ -115,6 +115,150 @@ if cap > doublecap {
 
 需要注意的是，切片扩容还会根据切片中元素的类型不同而做不同的处理，比如`int`和`string`类型的处理方式就不一样。
 
+## 截取
+
+截取也是比较常见的一种创建 slice 的方法，可以从数组或者 slice 直接截取，当然需要指定起止索引位置。
+
+基于已有 slice 创建新 slice 对象，被称为 `reslice`。新 slice 和老 slice 共用底层数组，新老 slice 对底层数组的更改都会影响到彼此。基于数组创建的新 slice 对象也是同样的效果：对数组或 slice 元素作的更改都会影响到彼此。
+
+值得注意的是，新老 slice 或者新 slice 老数组互相影响的前提是两者共用底层数组，如果因为执行 `append` 操作使得新 slice 底层数组扩容，移动到了新的位置，两者就不会相互影响了。所以，**问题的关键在于两者是否会共用底层数组**。
+
+截取操作采用如下方式：
+
+```go
+ data := [...]int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+ slice := data[2:4:6] // data[low, high, max]
+```
+
+对 `data` 使用3个索引值，截取出新的 `slice`。这里 `data` 可以是数组或者 `slice`。`low` 是最低索引值，这里是闭区间，也就是说第一个元素是 `data` 位于 `low` 索引处的元素；而 `high` 和 `max` 则是开区间，表示最后一个元素只能是索引 `high-1` 处的元素，而最大容量则只能是索引 `max-1` 处的元素。
+
+```txt
+max >= high >= low
+```
+
+当 `high == low` 时，新 `slice` 为空。
+
+还有一点，`high` 和 `max` 必须在老数组或者老 `slice` 的容量（`cap`）范围内。
+
+说明：例子来自雨痕大佬《Go学习笔记》第四版，P43页。这里我会进行扩展，并会作图详细分析。
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	slice := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	s1 := slice[2:5]
+    s2 := s1[2:6:7] // 改成s1[2:6:8]
+
+	s2 = append(s2, 100)
+	s2 = append(s2, 200)
+
+	s1[2] = 20
+
+	fmt.Println(s1)
+	fmt.Println(s2)
+	fmt.Println(slice)
+}
+```
+
+结果：
+
+```
+[2 3 20]
+[4 5 6 7 100 200]
+[0 1 2 3 20 5 6 7 100 9]
+```
+
+`s1` 从 `slice` 索引2（闭区间）到索引5（开区间，元素真正取到索引4），长度为3，容量默认到数组结尾，为8。 
+
+`s2` 从 `s1` 的索引2（闭区间）到索引6（开区间，元素真正取到索引5），容量到索引7（开区间，真正到索引6），为5。
+
+![slice origin](appendorigin.png)
+
+接着，向 `s2` 尾部追加一个元素 100：
+
+```
+s2 = append(s2, 100)
+```
+
+`s2` 容量刚好够，直接追加。不过，这会修改原始数组对应位置的元素。这一改动，数组和 `s1` 都可以看得到。
+
+![append 100](append100.png)
+
+再次向 `s2` 追加元素200：
+
+```
+s2 = append(s2, 100)
+```
+
+这时，`s2` 的容量不够用，该扩容了。于是，`s2` 另起炉灶，将原来的元素复制新的位置，扩大自己的容量。并且为了应对未来可能的 `append` 带来的再一次扩容，`s2` 会在此次扩容的时候多留一些 `buffer`，将新的容量将扩大为原始容量的2倍，也就是10了。
+
+![append 200](append200.png)
+
+最后，修改 `s1` 索引为2位置的元素：
+
+```
+s1[2] = 20
+```
+
+这次只会影响原始数组相应位置的元素。它影响不到 `s2` 了，人家已经远走高飞了。
+
+![s2](appendS2.png)
+
+再提一点，打印 `s1` 的时候，只会打印出 `s1` 长度以内的元素。所以，只会打印出3个元素，虽然它的底层数组不止3个元素。
+
+# 一个有趣的例子
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	//case 1
+	a := []int{}
+	a = append(a, 1)
+	a = append(a, 2)
+	b := append(a, 3)
+	c := append(a, 4)
+	fmt.Println("a: ", a, "\nb: ", b, "\nc: ", c)
+	fmt.Printf("a len %d, a cap %d\n", len(a), cap(a))
+	fmt.Printf("b len %d, b cap %d\n", len(b), cap(b))
+	fmt.Printf("c len %d, c cap %d\n", len(c), cap(c))
+	
+	//case 2
+	a = append(a, 3)
+	x := append(a, 4)
+	y := append(a, 5)
+	fmt.Println("a: ", a, "\nx: ", x, "\ny: ", y)
+	fmt.Printf("a len %d, a cap %d\n", len(a), cap(a))
+	fmt.Printf("x len %d, x cap %d\n", len(x), cap(x))
+	fmt.Printf("y len %d, y cap %d\n", len(y), cap(y))
+}
+/*
+a's pointer is c00000a4a0
+x's pointer is c00000a4a0
+a's pointer is c00000a4a0
+y's pointer is c00000a4a0
+a:  [1 2 3]
+x:  [1 2 3 5]
+y:  [1 2 3 5]
+a len 3, a cap 4
+x len 4, x cap 4
+y len 4, y cap 4
+*/
+```
+
+其他的都是输出都是常规操作，可能很多人对这个x的输出感到诧异，为什么是1 2 3 5，而不是 1 2 3 4.这是因为，他们都是切片，切片底层公用一个数组。x和y都是指针，指向同一个底层数组。
+当在操作b和c时候，由于超过了数组的slice的cap容量，会触发扩容操作，所以b和c分别指向了两个不同的新数组。而当x和y追加操作时，并未触发新数组创建，x和y指向同一个底层数组，所以在
+x追加操作时，传入的是a的指针, 返回的仍然是a的指针, 但是赋值给了x, 没有赋值给a,  所以返回len 4和a的容量4。
+y追加操作时，传入的是a的指针,返回的仍然是a的指针，len是4和a的容量4。
+原文链接：https://blog.csdn.net/u010278923/java/article/details/87093383
+
 ## copy
 
 func copy (dst []Type, src []Type) int

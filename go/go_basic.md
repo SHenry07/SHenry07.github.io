@@ -1,10 +1,16 @@
 - [关键字](#关键字)
 - [工作空间](#工作空间)
-- [环境变量](#GoPATH环境变量)
+  - [环境变量](#GoPATH环境变量)
 - [基本语法](#基本语法)
 - [指针](#指针)
 - [经典应用](#经典应用)
 - [Error](#Error)
+
+# 何时使用 new() 和 make()
+
+- 切片、映射和通道，使用 make 
+
+- 数组、结构体和所有的值类型，使用 new 
 
 # 关键字
 
@@ -186,6 +192,8 @@ if {
 }
 ```
 
+`break`操作是跳出当前循环，`continue`是跳过本次循环
+
 ### break
 
 循环嵌套循环时,可以在 break 后指定标签。用标签决定 哪个 循环被终止:
@@ -215,8 +223,28 @@ default:
 
 ### **延时调用函数(Deferred Function Calls)**
 
-defer 语句会将函数延迟到外层函数返回后执行,延迟的函数是按照**后进先出 (LIFO) 的顺序**执行 如果有多个defer调用 **是先进后出的顺序, 
-类似于入栈出栈一样:**
+defer 语句会将函数延迟到外层函数返回后执行,延迟的函数是按照**后进先出 (LIFO) 的顺序**执行 如果有多个defer调用 **是先进后出的顺序, 类似于入栈出栈一样:**
+
+**defer在入栈的时候,会把相关变量的值拷贝也压入栈中**
+
+```go
+func sum(n1, n2 int) int {
+    defer fmt.Println("n1=", n1)
+    defer fmt.Println("n2=", n2)
+    n1 ++
+    n2 ++
+    res := n1 + n2
+    fmt.Println("n3=",res)
+    return res
+}
+
+func main() {
+    res := sum(10,20)
+    fmt.Println("res=",res)
+}
+```
+
+**defer 仅在函数返回时才会执行，在循环的结尾或其他一些有限范围的代码内不会执行。**
 
 ### **基本类型type**
 
@@ -226,12 +254,14 @@ Go 的基本类型有
 bool
 
 string
+// A string may be empty, but not nil. Values of string type are immutable.不可变的
 
 //带符号:  首位0 表示- 1表示+ 
 int  int8  int16  int32  int64
+	 -128~127 -32768~32767
 //无符号:
 uint uint8 uint16 uint32 uint64 uintptr
-
+     0-255  0-65535 
 //int是带符号的，表示范围是：-2147483648到2147483648，即-2^31到2^31次方。
 
 //uint则是不带符号的，表示范围是：2^32即0到4294967295。
@@ -240,14 +270,21 @@ byte // uint8 的别名
 
 rune // int32 的别名
     // 表示一个 Unicode 码点
-uintptr	// 无符号整型，用于存放一个指针
+uintptr	// 无符号整型，用于存放一个指针  type uintptr uintptr
+// uintptr is an integer type that is large enough to hold the bit pattern of any pointer.
+
 
 float32 float64
 
 complex64 complex128
 ```
 
-**声明变量**
+#### **声明变量 -- 注意声明2字**
+
+全局变量: 一次声明，**全局赋值**
+
+局部变量: 一次声明，**函数内赋值**
+
 一般形式是使用var关键字 `var identifier type` 也可以一次声明多个变量
 
 1. **这种因式分解关键字的写法一般用于声明全局变量**
@@ -393,7 +430,7 @@ fmt.Println(s1)
 | strings.Index()/strings.LastIndex() | 子串出现的位置/最后出现的位置 |
 | strings.Join(a[]string, sep string) |  join操作(连接操作类似拼接)   |
 
-## byte和rune类型
+## byte和rune类型，类型转换的重点
 
 组成每个字符串的元素叫做“字符”，可以通过遍历或者单个获取字符串元素获得字符。 字符用单引号（’）包裹起来，如：
 
@@ -451,12 +488,37 @@ b -- 是一个单独的语句,不能像python一样放在=的右边进行赋值
 
 &   与  00 0  01  0  11 1  （两位均为1才为1）
 
-|  或     00 0  01 1   11 1    （两位有一个为1就为1）  
+|  或     00 0  01 1   11 1    （两位有一个为1就为1） 
+
+```txt
+& 常用来判断 奇数 偶数, 因为偶数的话 0000 0000 八进制的最后一位不可能为1
+0000 0010 2
+0000 0110 6
+0000 0101 5
+0000 0001 1
+0000 0000 0
+if A & 1 == 0 { print 偶数} else{print odd奇数}
+```
 
 ^ 异或00 0  01  1   11 0  （两位不一样则为1）
 
-<< 二进制数右移X位   相当于乘以2的X倍
-\>>二进制数左移X位   相当于除以2的X倍
+<< 符号位不变, 低位补0     **仅针对1**二进制数右移X位   相当于乘以2的X倍
+\>> 低位溢出,符号位不变,并用符号位补溢出的高位   **仅针对1**二进制数左移X位   相当于除以2的X倍
+
+```txt
+a := 1 >> 2 0000 0001 >> 0000 0000 = 0
+
+c := 1 << 2 0000 0001 << 0000 0100 = 4
+
+5 >> 1 = 0000 0101 >> 1 = 0000 0010 = 2
+5 >> 2 = 0000 0101 >> 1 = 0000 0001 = 1
+
+任何数和本身异或则为0
+
+任何数和 0 异或是本身
+
+异或满足交换律。 即 a ^ b ^ c ，等价于 a ^ c ^ b
+```
 
 ### 逻辑运算符
 
@@ -464,19 +526,115 @@ b -- 是一个单独的语句,不能像python一样放在=的右边进行赋值
 
 ### 赋值运算符
 
-------
+## 运算符优先级
 
-### 类型别名得到的新类型并非和原类型完全相同，新类型不会拥有原类型所附带的方法
+```txt
+9	==  !=	等于/不等于
+10	&	按位与
+11	^	按位异或
+12	|	按位或
+```
 
-# 内存操作
+## 进制
 
-## 指针
+1. 二进制
+
+   2-->8  3个数字为一组 因为3个数字正好表示包括7以内的所有数字
+
+   2-->16 4个数字为一组 因为4个数字正好表示包括15以内的所有数字
+
+2. 十进制
+
+3. 八进制
+
+   以数字0开头表示
+
+4. 十六进制
+
+   0-9 A-F 以0x或0X开头表示
+
+   A-F不区分大小写
+
+   ![image-20200326160357579](image-20200326160357579.png)
+
+   ![image-20200326161125467](image-20200326161125467.png)
+
+## type的用法
+
+1. 定义结构体`type person struct { }`
+
+2. 类型等价定义，相当于类型重命名,类型别名
+
+   请特别注意**类型别名得到的新类型并非和原类型完全相同，新类型不会拥有原类型所附带的方法**
+
+   > 类型别名(声明类型)和类型命名的区别
+   >
+   > var name string 声明类型
+   >
+   > type name string 类型别名
+
+3. 结构体内嵌匿名成员
+
+```	go
+//结构体内嵌匿名成员定义
+
+type person struct {
+    string  //直接写类型，匿名
+    age int
+}
+```
+结构体中内嵌匿名结构体的时候,
+```go
+type address struct {
+	string
+	zipcode int
+}
+
+type person stuct {
+    string
+    address 
+    age int
+}
+p := person{}
+p.string = "XXX" // 只能直接匹配到 person.string
+p.address.string = "XXX" // 才会匹配address.string
+```
+
+4. 定义接口类型
+
+   ```go
+   //接口定义
+   type Personer interface {
+   Run()
+   Name() string
+   }
+   //接收参数person不可以是指针类型，否则不认为是实现了接口
+   func (p person) Name() string {
+   
+   ```
+
+5. 定义函数类型
+
+   ```go
+   //以下是定义一个函数类型handler
+   type handler func(name string) int
+   // 针对这个函数类型可以再定义方法，如：
+   func (h handler) add(name string) int {
+        return h(name) + 10
+   }
+   ```
+
+# 进阶结构/复合类型
+
+## 内存操作
+
+### 指针
 
 指针保存了值的内存地址
 
 type *T 是一个指向T类型值的指针,其零值为nil.
 
-`var p *int` 现在p是一个指向整数值的指针
+`var p *int` 现在p是一个指向整数值的指针, 但由于未初始化, 指针的值为nil
 
 让指针指向某些内容,可以使用取址操作符 ( & )
 
@@ -499,7 +657,34 @@ fmt.Prrintln(*p)  //通过指针p 读取 i
 
 如果这样写: `*p++` ,它表示 `(*p)++` :首先获取指针指向的值,然后对这个值**加一**
 
-## 内存分配
+符号 * 可以放在一个指针前，如 (\*pointer)，那么它将得到这个指针指向地址上所存储的值，这称为反向引用。不过在Go语言中，(*pointer).x可以简写为pointer.x。
+
+对于任何一个变量 var， 表达式var == *(&var)都是正确的
+
+```go
+func main() {
+	var a, b int = 20, 30 // 声明实际变量
+	var ptra *int         // 声明指针变量
+	var ptrb *int = &b
+
+	ptra = &a // 指针变量的存储地址
+
+	fmt.Printf("a  变量的地址是: %x\n", &a)
+	fmt.Printf("b  变量的地址是: %x\n", &b)
+
+	// 指针变量的存储地址
+	fmt.Printf("ptra  变量的存储地址: %x\n", ptra)
+	fmt.Printf("ptrb  变量的存储地址: %x\n", ptrb)
+
+	// 使用指针访问值
+	fmt.Printf("*ptra  变量的值: %d\n", *ptra)
+	fmt.Printf("*ptrb  变量的值: %d\n", *ptrb)
+}
+```
+
+
+
+### 内存分配
 
 go有两个内存分配原语 new 和 make
 
@@ -534,7 +719,17 @@ new 分配;make 初始化
    // 上面x得到的是值  下面x得到的是指针
    ```
 
-# 进阶结构
+
+cap(),len()支持的数据类型:
+
+```txt
+//  Array: the number of elements in v.
+// Pointer to array: the number of elements in *v (even if v is nil).
+// Slice, or map: the number of elements in v; if v is nil, len(v) is zero.
+// String: the number of bytes in v.
+// Channel: the number of elements queued (unread) in the channel buffer;
+//          if v is nil, len(v) is zero.
+```
 
 ## **Array 数组**
 
@@ -555,6 +750,8 @@ var XX = [3]bool{true,true,true}
 var XX = [...]int{0,23,2315,666,7777}
 var XX = [5]int{0 : 1, 4 : 2}   //--> [1,0,0,0,2]
 b := [5]int{1, 2, 3, 4, 5}
+
+var XX [5]int={1,2,3,4,5}// 错误
 ```
 
 多维数组
@@ -585,6 +782,19 @@ XX = {
 
 但是更改切片的元素 **会修改**其底层数的组中的元素，与它共享的数组的切片都会引用新的修改
 
+```go
+func main() {
+	chars := "string"
+	T := make([]byte,1,1)
+	T = []byte(chars)
+	F := append(T[:0],T[1:]...)
+	fmt.Printf("F%#v", string(F))
+}
+// T[:0] //len 为0  cap为0
+```
+
+
+
 ### 切片语法slice literals
 
 This is an array literals `[3]bool{true,true,false}`
@@ -592,6 +802,28 @@ This is an array literals `[3]bool{true,true,false}`
 This is a slice literals `[]bool{true,true,false}`
 
 **注意[n]T和[]T是数组和切片声明方式的不同** 
+
+```go
+board1 := [][]string{
+    []string{"_", "_", "_"},
+    []string{"_", "_", "_"},
+    []string{"_", "_", "_"},
+}
+// 简写
+b := [][]string{
+    {"_", "_", "_"},
+    {"_", "_", "_"},
+    {"_", "_", "_"},
+}
+
+// 例子
+	test := [][]byte{[]byte{'1'},}
+
+	var test [][]byte
+	test = make([][]byte,1)
+	test[0] = make([]byte,1)
+	test[0][0] = '1'
+```
 
 切片看起来像创建一个和上面一模一样的数组，然后引用了它,所以切片的语法类似与no length的数组语法
 
@@ -616,12 +848,18 @@ This is a slice literals `[]bool{true,true,false}`
 - nil 切片的长度和容量为 0 且没有底层数组。
 - 因为`s3 := make(int[],0)  //len(s3)=0;cap(s3)=0;s3!=nil`所以要判断一个切片是否是空的，要是用`len(s) == 0`来判断，不应该使用`s == nil`来判断。
 
+#### 截取 另外一种声明初始化slice的方式
+
+[详见](./slice.md/#截取)
+
 #### 切片的扩容策略
 
 1. 如果申请的容量大于原来的2倍,那就直接扩容至新申请的容量
 2. 如果数组原容量小于1024，那就直接2倍
 3. 如果数组原容量大于1024，那就以原容量的1/4循环扩容
 4. 具体存储的值类型不同，扩容策略也有部分不同
+
+[详细的扩容策略](https://github.com/qcrao/Go-Questions/blob/master/数组和切片/切片的容量是怎样增长的.md) 也请查询下面 结构体初始化部分的内存对齐
 
 ### **用make函数创建切片creating s slice with make**
 
@@ -687,7 +925,9 @@ func main() {
 }
 ```
 
-## **映射Maps**
+
+
+## 映射Map 不是并发安全的
 
 map 将keys 映射到 values `map[KeyType]ValueType`
 
@@ -730,7 +970,7 @@ for  _, value := range pwo // 只要值
 结构体就是一组字段(field)
 
 ```go
-type person {
+type person struct {
     name stting
     age  int 
     gender bool
@@ -817,12 +1057,34 @@ p2 := person{"邢浩杰",18} // 结构体实例化
 p4 := newPerson("邱骥"，36) // 调用构造函数生成person类型变量
 ```
 
+取地址实例化是最广泛的一种结构体实例化方式，可以使用函数封装上面的初始化过程，代码如下：
 
+```go
+func newCommand(name string, varref *int, comment string) *Command {
+    return &Command{
+        Name:    name,
+        Var:     varref,
+        Comment: comment,
+    }
+}
+
+cmd = newCommand(
+    "version",
+    &version,
+    "show version",
+)
+func Newnode(data int) *node {
+	return &node{
+		data: data,
+		next: nil,
+	}
+}j
+```
 
 # Func函数,一等公民
 
 type mytype int  ← type声明新的类型
-func (p mytype) func name(q int) (r,s int) { return 0,0 }
+func (p mytype) funcname(q int) (r,s int) { return 0,0 }
 0           1    	               2                3           4              5
 
 - 0 关键字 func 用于定义一个函数;
@@ -952,6 +1214,8 @@ var xs = map[int]func() int{
 }
 ```
 
+
+
 # Methods 方法
 
 GO 没有类 A method is a function with a special ***receiver***
@@ -1001,35 +1265,77 @@ GO 没有类 A method is a function with a special ***receiver***
 
 # 接口 Interfaces
 
+一个类型实现interface定义的"所有"方法, 即认为实现这个接口.  // "所有"   目前不确定
+
+
+
 An ***interface type*** is defined as a set of method signatures
 接口**类型** 是由**一组**方法签名定义的集合
 
-隐式实现
+- 隐式实现
 
-接口也是值，它们也可以像其他值一样传递。可以用作函数的参数或者返回值
+  只要某个类型拥有该接口的所有方法签名, 即算实现该接口, 无需显式声明实现了哪个接口,这被称为Structural Typing
 
-在内部，接口值可以看做包含值和具体类型的元组：
+- 接口也是值，它们也可以像其他值一样传递。可以用作函数的参数或者返回值
 
-`(value, type)`
+- 在内部，接口值可以看做**包含值和具体类型的元组**：`(value, type)`
 
-接口值保存了一个具体底层类型的具体值。
+- 接口值保存了一个具体底层类型的具体值。
 
-接口值调用方法时会执行其底层类型的同名方法。
+- 接口值调用方法时会执行其**底层类型的同名方法**。
 
-底层值为 nil 的接口值
-即便接口内的具体值为 nil，方法仍然会被 nil 接收者调用。
+- 底层值为 nil 的接口值
+  即便接口内的具体值为 nil，方法仍然会被 nil 接收者调用。
 
-在一些语言中，这会触发一个空指针异常，但在 Go 中通常会写一些方法来优雅地处理它（如本例中的 M 方法）。
+- 将对象赋值给接口时, 会发生**拷贝**, 接口内部存储的是指向这个复制品的指针, 既无法修改复制品的状态,也无法获取指针
 
-注意: 保存了 nil 具体值的接口其自身并不为 nil。
+- **制定0个方法的接口值为“空接口”** `interface{}`
 
-**制定0个方法的接口值为“空接口”** `interface{}`
+  **空接口可保存任何类型的值。（因为每个类型都至少实现了零个方法。）**
 
-**空接口可保存任何类型的值。（因为每个类型都至少实现了零个方法。）**
+  **空接口被用来处理未知类型	的值。例如，fmt.Print 可接受类型为 interface{} 的任意数量的参数。**
 
-**空接口被用来处理未知类型的值。例如，fmt.Print 可接受类型为 interface{} 的任意数量的参数。**
+  [额外的解释](interface.md)
 
-[额外的解释](interface.md)
+  > interface 不是引用类型
+  >
+  > 其实也不能这么说, 它的传递方式应该是  其传递的参数的具体底层值 的传递方式
+
+**注意: 保存了 nil 具体值的接口其自身并不为 nil。只有当接口存储的类型和对象都为nil时,接口才等于nil**
+
+```go
+package main
+import "fmt"
+
+type People interface {
+    Show()
+}
+
+type Student struct {}
+
+func (stu *Student) Show() {
+    
+}
+
+func live() People {
+    var stu *Student 
+    return stu
+}
+
+func main() {
+    var p People 
+    if p == nil {
+        fmt.Println("Yes")
+    }else{
+        fmt.Println("No")
+    }
+    if live() == nil {
+        fmt.Println("AAAAAAA")
+    }else {
+        fmt.Println("BBBBBBB")
+    }
+}
+```
 
 ## 类型断言 Type assertions
 
@@ -1049,7 +1355,7 @@ A type assertions 可以访问  接口值的底层具体值
 
 >请注意这种语法和读取一个映射时的相同之处。
 
-### 类型选择
+#### type switch
 
 一种按顺序从几个类型断言中选择分支的结构.与一般的switch语句相似,不过case为类型(int float64)
 
@@ -1064,7 +1370,8 @@ default:
 }
 ```
 
-类型选择中的声明与类型断言i.(T)的语法相同只不过把 具体类型T换成了keyword `type`
+**类型选择中的声明与类型断言i.(T)的语法相同只不过把 具体类型T换成了keyword `type`**
+
 ## 常见包中的接口
 
 1. fmt 包中定义的 Stringer 是最普遍的接口之一。
@@ -1122,9 +1429,72 @@ type Image interface {
 
 `color.Color` 和 `color.Model` 类型也是接口，但是通常因为直接使用预定义的实现 `image.RGBA` 和 `image.RGBAModel` 而被忽视了。这些接口和类型由 [`image/color`](https://go-zh.org/pkg/image/color/) 包定义。
 
-## 反射 reflect
+# 函数参数的传递方式
 
-待补充
+## 值引用
+
+基本数据类型, 数组和结构体struct
+
+## 间接引用
+
+指针, slice 切片, map, chan, interface 等都是引用类型
+
+# 变量的作用域问题
+
+3. 如果变量在一个代码块, 比如for/if 中,那么这个变量的作用域就在改代码块
+4. 变量 遵循**就近原则**, 即从使用的地方开始找, 找到第一个就停止
+
+# 反射 reflect 
+
+使得interface{}有更大的发挥余地
+
+值拷贝
+
+```go
+reflect.Valueof()
+reflect.Typeof()
+// 从接口中获取目标对象信息
+```
+
+- 反射会将匿名字段作为独立字段(匿名字段本质)
+- 想要利用反射修改对象状态, 前提是interface.data 是 settable, 即pointer-interface
+- 通过反射可以"动态"调用方法
+
+```go
+package main 
+import (
+	"fmt"
+    "reflect"
+)
+
+func Info(o interface{}) {
+    t := reflect.Typeof(o)
+    fmt.Println("Type:", t.Name())
+    
+    if k := t.Kind(); k != reflect.Struct { // Kind判断 传入的类型
+        fmt.Println("xxx")
+        return
+    }
+    
+    v := reflect.Valueof(o)
+    fmt.Println("Fields")
+    
+    for i := 0; i  < t.NumField(); i ++ {
+        f := t.Field(i)
+        val := v.Field(i).Interface()
+        fmt.Printf("%6s: %v = %v\n", f.Name, f.Type, val)
+    }
+        
+    for i := 0; i  < t.NumMethod(); i ++ {
+        m := t.Method(i)
+        fmt.Printf("%6s: %v\n", m.Name, m.Type)
+    }
+}
+```
+
+
+
+
 
 # panic 和 recover 恐慌和恢复
 
@@ -1139,7 +1509,7 @@ F 返回到调用它的地方。在调用的地方, F 的行为就像调用了 p
 ## Recover
 
 是一个内建的函数,可以让进入令人恐慌的流程中的 goroutine 恢复过来。 recover
-仅 在延迟函数中有效。在正常的执行过程中,调用 recover 会返回 nil 并且没
+仅 **在延迟函数中有效**。在正常的执行过程中,调用 recover 会返回 nil 并且没
 有其他任何效果。如果当前的 goroutine 陷入恐慌,调用 recover 可以捕获到
 panic 的输入值,并且恢复正常的执行。
 
@@ -1161,6 +1531,17 @@ func throwsPanic(f func()) (b bool) { 0
   如果当前的 goroutine 产生了 panic,这个 defer 函数能够发现。当 recover() 返回非 nil 值,设置 b 为 true;
 - 2 调用作为参数接收的函数;
 - 3 返回 b 的值。由于 b 是命名返回值(第 28 页),因此无须指定 b 。
+
+```go
+func main() {
+    defer fmt.Println(1)
+    defer recover()  // if recover outside the deferred "function" it will not stop a paincing sequnce 会报错
+    defer fmt.Println(2)
+    painc("abc")
+}
+```
+
+
 
 
 # Go程和channel
@@ -1201,6 +1582,8 @@ OS线程（操作系统线程）一般都有固定的栈内存（通常为2MB）
 
 P的个数是通过`runtime.GOMAXPROCS`设定（最大256），Go 1.5版本之后默认为物理线程数。 在并发量大的时候会增加一些P和M，但不会太多，切换太频繁的话得不偿失。
 
+[点我了解更多](https://www.cnblogs.com/sunsky303/p/9705727.html)
+
 ## Channel信道
 
 信道是带有类型的管道，你可以通过它用信道操作符 `<-` 来发送或者接收值。
@@ -1210,12 +1593,20 @@ P的个数是通过`runtime.GOMAXPROCS`设定（最大256），Go 1.5版本之�
 ch <- v    // 将 v 发送至信道 ch。
 v := <-ch  // 从 ch 接收值并赋予 v。
 <- ch      // 等待, 直到从channel上接收到一个值，值被忽略
-ci <- 1    // 发送 整数 1 到 channel c
+ci <- 1    // 发送 整数 1 到 channel c  ci<- 是不对的
 close(ch)  // 关闭  关闭后的通道还是可以取值,取完之后返回的是类型零值
 ```
 
 （“箭头”就是数据流的方向。）
-Go语言的并发模型是`CSP（Communicating Sequential Processes）`，提倡**通过通信共享内存**而不是**通过共享内存而实现通信**。
+Go语言的并发模型是`CSP（Communicating Sequential Processes）`，提倡**通过通信共享内存**而不是**通过共享内存而实现通信**
+
+```go
+var cha1 chan int
+var cha2 chan <- float64
+var cha3 <-chan int 
+```
+
+可以将channel **隐式转换** 为单向队列, 只收或只发, 不能将单向channel 转换为普通channel
 
 ### Channel类型
 
@@ -1243,11 +1634,11 @@ chan<- <-chan int  // 等价 chan<- (<-chan int)
 chan (<-chan int)
 ```
 
-![channel异常总结](E:/banksteel/simple-ci-description.wiki/images/channel01.png)
+![channel异常总结](channel01.png)
 
 和映射与切片一样，信道在使用前必须创建：
 
-```go
+```j
 ch := make(chan int)
 ```
 
@@ -1256,7 +1647,7 @@ ch := make(chan int)
 信道可以是 *带缓冲的*。将缓冲长度作为第二个参数提供给 `make` 来初始化一个带缓冲的信道：
 
 ```
-ch := make(chan int, 100)
+ch := make(chan int, 100) // 此时以像内存申请空间,初始化为 隔类型的零值
 ```
 
 仅当信道的缓冲区填满后，向其发送数据时才会阻塞。当缓冲区为空(即被填满)时，接受方会阻塞。
@@ -1285,13 +1676,16 @@ v, ok := <-ch
 
 *还要注意：* 信道与文件不同，通常情况下无需关闭它们。只有在必须告诉接收者不再有需要发送的值时才有必要关闭，例如终止一个 `range` 循环。
 
-### select 语句
+> ​	NOTE: 无缓冲的channel是同步的, 有缓冲的channel是非同步的
+
+
+### select 多路复用
 
 `select` 语句使一个 Go 程可以等待多个通信操作。
 
 `select` 会阻塞到某个分支可以继续执行为止，这时就会执行该分支。当**多个分支都准备好**时会随机选择一个执行。
 
- `select`语句选择**一组可能的send操作和receive操作**去处理。它类似`switch`,但是只是用来处理通讯(communication)操作。
+ `select`语句选择**一组可能的send操作和receive操作**去处理。它类似`switch`,但是只是用来处理通讯(communication)操作。即每个case语句里必须是一个I/O操作
 -  它的`case`可以是send语句，也可以是receive语句，亦或者`default`。
 
 - `receive`语句可以将值赋值给一个或者两个变量。它必须是一个receive操作。
@@ -1332,6 +1726,42 @@ func main() {
 			fmt.Println("    .")
 			time.Sleep(50 * time.Millisecond)
 		}
+	}
+}
+```
+
+### worker pool（goroutine池）
+
+在工作中我们通常会使用可以指定启动的goroutine数量–`worker pool`模式，控制`goroutine`的数量，防止`goroutine`泄漏和暴涨。
+
+一个简易的`work pool`示例代码如下：
+
+```go
+func worker(id int, jobs <-chan int, results chan<- int) {
+	for j := range jobs {
+		fmt.Printf("worker:%d start job:%d\n", id, j)
+		time.Sleep(time.Second)
+		fmt.Printf("worker:%d end job:%d\n", id, j)
+		results <- j * 2
+	}
+}
+
+
+func main() {
+	jobs := make(chan int, 100)
+	results := make(chan int, 100)
+	// 开启3个goroutine
+	for w := 1; w <= 3; w++ {
+		go worker(w, jobs, results)
+	}
+	// 5个任务
+	for j := 1; j <= 5; j++ {
+		jobs <- j
+	}
+	close(jobs)
+	// 输出结果
+	for a := 1; a <= 5; a++ {
+		<-results
 	}
 }
 ```

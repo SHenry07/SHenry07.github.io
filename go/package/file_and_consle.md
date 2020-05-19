@@ -1,5 +1,3 @@
-
-
 # 文件操作
 
 ## file.Read()
@@ -162,6 +160,22 @@ func main() {
          fmt.Printf("The input was: %s", input)     
 		}
  }
+
+	inputReadder := bufio.NewReader(os.Stdin)
+	fmt.Println("Please enter the url...")
+	url, err := inputReadder.ReadString('\n')
+	url = strings.TrimSuffix(url, "\r\n")
+	url = strings.TrimSpace(url)
+
+// 另外一种写法
+   stdin := bufio.NewReader(os.Stdin)
+    count, err := fmt.Fscan(stdin, &people)
+    stdin.ReadString('\n')
+    if err != nil {
+        fmt.Println(err)
+        fmt.Printf("count:%d\n", count)
+        fmt.Println("您的输入有误，请重新输入")
+    }
 ```
 
 
@@ -297,6 +311,27 @@ func main() {
         s += flag.Arg(i)
     }
     os.Stdout.WriteString(s)
+}
+```
+
+```go
+var (
+	argFrequency   = flag.Duration("frequency", 30*time.Second, "The resolution at which Eventer pushes events to sinks")
+	argMaxProcs    = flag.Int("max_procs", 0, "max number of CPUs that can be used simultaneously. Less than 1 for default (number of cores)")
+	argSources     flags.Uris
+	argSinks       flags.Uris
+	argVersion     bool
+	argHealthzIP   = flag.String("healthz-ip", "0.0.0.0", "ip eventer health check service uses")
+	argHealthzPort = flag.Uint("healthz-port", 8084, "port eventer health check listens on")
+)
+
+func main() {
+
+	flag.Var(&argSources, "source", "source(s) to read events from")
+	flag.Var(&argSinks, "sink", "external sink(s) that receive events")
+	flag.BoolVar(&argVersion, "version", false, "print version info and exit")
+	flag.Parse()
+
 }
 ```
 

@@ -4,7 +4,7 @@
 
 # 总览
 
-![img](webp)
+![img](ioreader.png)
 
 围绕`io.Reader/Writer`，有几个常用的实现：
 
