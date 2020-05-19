@@ -1,0 +1,46 @@
+openssl req -x509 -new -nodes -sha512 -days 3650 \
+ -subj "/C=CN/ST=Shanghai/L=Shanghai/O=banksteel/OU=OPS/CN=192.168.100.235" \
+ -key ca.key \
+ -out ca.crt
+
+openssl genrsa -out 192.168.100.235.key 4096
+
+
+openssl req -sha512 -new \
+ -subj "/C=CN/ST=Shanghai/L=Shanghai/O=banksteel/OU=OPS/CN=192.168.100.235" \
+    -key 192.168.100.235.key \
+    -out 192.168.100.235.csr
+
+subjectAltName 是重点
+cat > v3.ext <<-EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+IP.1=192.168.100.235
+EOF
+
+
+openssl x509 -req -sha512 -days 3650 \
+    -extfile v3.ext \
+    -CA ca.crt -CAkey ca.key -CAcreateserial \
+    -in 192.168.100.235.csr \
+    -out 192.168.100.235.crt
+
+
+cp 192.168.100.235.crt /data/cert/
+cp 192.168.100.235.key /data/cert/
+
+openssl x509 -inform PEM -in 192.168.100.235.crt -out 192.168.100.235.cert
+
+\cp -f 192.168.100.235.cert /etc/docker/certs.d/192.168.100.235/
+\cp -f 192.168.100.235.key /etc/docker/certs.d/192.168.100.235/
+\cp -f ca.crt /etc/docker/certs.d/192.168.100.235/
+
+ helm push mysql-6.8.0.tgz --ca-file ca.crt   mycluster   
+
+\cp -f 192.168.100.235.crt /etc/pki/ca-trust/source/anchors/192.168.100.235.crt
+update-ca-trust
