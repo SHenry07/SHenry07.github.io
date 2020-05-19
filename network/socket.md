@@ -6,4 +6,4 @@ Socket是BSD UNIX的进程通信机制，通常也称作”套接字”，用于
 
 `Socket`是应用层与TCP/IP协议族通信的中间软件抽象层。在设计模式中，`Socket`其实就是一个门面模式，它把复杂的TCP/IP协议族隐藏在`Socket`后面，对用户来说只需要调用Socket规定的相关函数，让`Socket`去组织符合指定的协议数据然后进行通信。
 
-![socket图解](https://www.liwenzhou.com/images/Go/socket/socket.png)
+![socket图解](socket.png)
