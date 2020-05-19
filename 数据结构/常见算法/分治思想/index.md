@@ -1,10 +1,9 @@
 # 分而治之 递归 
 分治法是把任意大小问题尽可能地等分成两个子问题的递归算法 
-![image-20191229133936850](image-20191229133936850.jpg)
+![image-20191229133936850](./image-20191229133936850.jpg)
 
 
-
-# 在线处理
+# 在线处理 // 也叫贪心 //也有前缀和的思想	
 
 ```c
 int MaxSubseqSum4( int A[], int N )  
@@ -19,6 +18,28 @@ int MaxSubseqSum4( int A[], int N )
                   ThisSum = 0; /* 则不可能使后面的部分和增大，抛弃之 */
     }
     return MaxSum;  
+}
+
+// 支持负数的最大子列和 [-2,-1]
+func maxSubArray(nums []int) int {
+    // 在线处理 比 动态规划 分而治之好
+    ans := nums[0]
+    cur := 0
+    for _,v := range nums{
+        if cur > 0 {
+             cur += v
+        }else {
+            cur = v
+        }
+      ans = max(ans,cur)
+    }
+    return ans
+}
+func max(a,b int) int {
+    if a > b {
+        return a
+    }
+    return b
 }
 ```
 
@@ -56,7 +77,7 @@ func DivideAndConquer(array []int, left,right int )  int {
 	leftSum = DivideAndConquer(array,left,mid)
 	rightSum = DivideAndConquer(array,mid+1,right)
 	/* 下面求跨分界线的最大子列和 */
-	var leftBorderSum,  maxLeftBorder int = 0,0
+	var leftBorderSum,  maxLeftBorder int = 0,0 //最小值为0的话 负数会无法计算
 	var rightBorderSum,  maxRightBorder int = 0,0
 	for i := mid ;i>=0;i--{ /* 从中线向左扫描 */
         leftBorderSum += array[i];  
@@ -90,3 +111,49 @@ func Max(x, y,z int) int {
 }
 ```
 
+# 例子2
+
+```java
+class Solution {
+    private int countInRange(int[] nums, int num, int lo, int hi) {
+        int count = 0;
+        for (int i = lo; i <= hi; i++) {
+            if (nums[i] == num) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int majorityElementRec(int[] nums, int lo, int hi) {
+        // base case; the only element in an array of size 1 is the majority
+        // element.
+        if (lo == hi) {
+            return nums[lo];
+        }
+
+        // recurse on left and right halves of this slice.
+        int mid = (hi-lo)/2 + lo;
+        int left = majorityElementRec(nums, lo, mid);
+        int right = majorityElementRec(nums, mid+1, hi);
+
+        // if the two halves agree on the majority element, return it.
+        if (left == right) {
+            return left;
+        }
+
+        // otherwise, count each element and return the "winner".
+        int leftCount = countInRange(nums, left, lo, hi);
+        int rightCount = countInRange(nums, right, lo, hi);
+
+        return leftCount > rightCount ? left : right;
+    }
+
+    public int majorityElement(int[] nums) {
+        return majorityElementRec(nums, 0, nums.length-1);
+    }
+}
+```
+
+作者：LeetCode-Solution
+链接：https://leetcode-cn.com/problems/majority-element/solution/duo-shu-yuan-su-by-leetcode-solution/
