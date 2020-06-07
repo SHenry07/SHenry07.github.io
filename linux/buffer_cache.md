@@ -59,33 +59,54 @@ Many load balancing and workload placing programs check /proc/meminfo to estimat
 
 参考文章来自：https://mp.weixin.qq.com/s?biz=MzA3NjYxOTA0MQ==&mid=2653965212&idx=2&sn=8b63bee228bdc5cb7441e0679c03808c&scene=0#rd
 
+# 经学习后以下文章 有大量错误与猜想
+
 # 什么是buffer/cache？
 
-buffer和cache是两个在计算机技术中被用滥的名词，放在不通语境下会有不同的意义。在Linux的内存管理中，这里的buffer指Linux内存的：Buffer cache。这里的cache指Linux内存中的：Page cache。翻译成中文可以叫做缓冲区缓存和页面缓存。在历史上，它们一个（buffer）被用来当成对io设备写的缓存，而另一个（cache）被用来当作对io设备的读缓存，这里的io设备，主要指的是块设备文件和文件系统上的普通文件。**但是现在，它们的意义已经不一样了。**在当前的内核中，page cache顾名思义就是针对内存页的缓存，说白了就是，如果有内存是以page进行分配管理的，都可以使用page cache作为其缓存来管理使用。当然，不是所有的内存都是以页（page）进行管理的，也有很多是针对块（block）进行管理的，这部分内存使用如果要用到缓存功能，则都集中到buffer cache中来使用。（从这个角度出发，是不是buffer cache改名叫做block cache更好？）然而，也不是所有块（block）都有固定长度，系统上块的长度主要是根据所使用的块设备决定的，而页长度在X86上无论是32位还是64位都是4k。
+buffer和cache是两个在计算机技术中被用滥的名词，放在不通语境下会有不同的意义。在Linux的内存管理中，这里的buffer指Linux内存的：block buffer/Buffer cache。这里的cache指Linux内存中的：Page cache。翻译成中文可以叫做缓冲区缓存和页面缓存。
 
-明白了这两套缓存系统的区别，就可以理解它们究竟都可以用来做什么了。
+理论上，一个文件读首先到Block Buffer, 然后到Page Cache。有了文件系统才有了Page Cache. 在老的Linux上这两个Cache是分开的。 那这样对于文件数据，会被Cache两次。这种方案虽然简单，但低效。后期Linux把这两个Cache统一了。对于文件，Page Cache指向Block Buffer，对于非文件则是Block Buffer。这样就如文件实验的结果，文件操作，只影响Page Cache，Raw操作，则只影响Buffer. 比如一台VM虚拟机，则会越过File System，只接操作 Disk, 常说的Direct IO.
 
 **什么是page cache**
 
-Page cache主要用来作为文件系统上的文件数据的缓存来用，尤其是针对当进程对文件有read／write操作的时候。如果你仔细想想的话，作为可以映射文件到内存的系统调用mmap，是不是很自然的也应该用到page cache？在当前的系统实现里，page cache也被作为其它文件类型的缓存设备来用，所以事实上**page cache也负责了大部分的块设备文件的缓存工作**。
+Page cache主要用来作为文件系统上的文件数据的缓存来用，尤其是针对当进程对文件有read／write操作的时候。
 
-**什么是buffer cache**
+**什么是buffer cache/block buffer**
 
 Buffer cache则主要是设计用来在系统对块设备进行读写的时候，对块进行数据缓存的系统来使用。这意味着某些对块的操作会使用buffer cache进行缓存，比如我们在格式化文件系统的时候。一般情况下两个缓存系统是一起配合使用的，比如当我们对一个文件进行写操作的时候，page cache的内容会被改变，而buffer cache则可以用来将page标记为不同的缓冲区，并记录是哪一个缓冲区被修改了。这样，内核在后续执行脏数据的回写（writeback）时，就不用将整个page写回，而只需要写回修改的部分即可。
 
 # 如何回收cache？
 
-Linux内核会在内存将要耗尽的时候，触发内存回收的工作，以便释放出内存给急需内存的进程使用。一般情况下，这个操作中主要的内存释放都来自于对buffer／cache的释放。尤其是被使用更多的cache空间。既然它主要用来做缓存，只是在内存够用的时候加快进程对文件的读写速度，那么在内存压力较大的情况下，当然有必要清空释放cache，作为free空间分给相关进程使用。所以一般情况下，我们认为buffer/cache空间可以被释放，这个理解是正确的。
-
-但是这种清缓存的工作也并不是没有成本。理解cache是干什么的就可以明白清缓存必须保证cache中的数据跟对应文件中的数据一致，才能对cache进行释放。**所以伴随着cache清除的行为的，一般都是系统IO飙高。**因为内核要对比cache中的数据和对应硬盘文件上的数据是否一致，如果不一致需要写回之后才能回收。
-
-在系统中除了内存将被耗尽的时候可以清缓存以外，我们还可以使用下面这个文件来人工触发缓存清除的操作：
+人工触发缓存清除的操作：
 
 `echo 1 > /proc/sys/vm/drop_caches`表示清除page cache。
 
 `echo 2 > /proc/sys/vm/drop_caches`:表示清除回收slab分配器中的对象（包括目录项缓存和inode缓存）。slab分配器是内核中管理内存的一种机制，其中很多缓存数据实现都是用的page cache。
 
 `echo 3 > /proc/sys/vm/drop_caches`:表示清除page cache和slab分配器中的缓存对象。
+
+```shell
+          To free pagecache, use:
+
+              echo 1 > /proc/sys/vm/drop_caches
+
+          To free dentries and inodes, use:
+
+              echo 2 > /proc/sys/vm/drop_caches
+
+          To free pagecache, dentries and inodes, use:
+
+              echo 3 > /proc/sys/vm/drop_caches
+```
+Because writing to this file is a nondestructive operation and dirty objects are not freeable, the  user should run sync(1) first.
+
+It appears you are working with memory caching of directory structures. 当我们正在使用内存缓存目录结构时，
+
+An ***inode*** in your context is a data structure that represents a file. A ***dentries*** is a data structure that represents a directory. 在这个上下文中的**inode是表示文件的数据结构，而dentries是表示目录的数据结构**。
+
+These structures could be used to build a memory cache that represents the file structure on a disk. To get a directly listing, the OS could go to the dentries–if the directory is there–list its contents (a series of inodes). If not there, go to the disk and read it into memory so that it can be used again. 这些结构可用于构建表示磁盘上的文件结构的内存高速缓存。为了直接获得列表，操作系统可以去dentries那里（如果目录在那里的话）列出其内容（一系列inode）。如果没有，则会去磁盘上将其读入内存，以便它可以再次使用。
+
+The ***page cache*** could contain any memory mappings to blocks on disk. That could conceivably be buffered I/O, memory mapped files, paged areas of executables–anything that the OS could hold in memory from a file. 页面缓存（page cache）可以包含磁盘块的任何内存映射。这可以是缓冲I/O，内存映射文件，可执行文件的分页区域——操作系统可以从文件保存在内存中的任何内容。
 
 # 哪些cache 不能被回收？
 
@@ -304,4 +325,4 @@ int main()
 1. 作为缓冲（buffer)，其内容有头有尾，类似于一个很深的队列，能容量一定的数据量。其作用就是解决生产者消费者两边处理速度的差异，缓冲内的内容将会在一定时间内迅速消耗掉的而不是长期呆在里面，而缓存(cache) 如果没有内存释放的需要，就会一直停留。
 2. 缓存(cache) 缓存的一个重要的作用就是提升数据读写的效率（命中率）。把新数据写入cache，而不是buffer，可以让数据留在缓存，以待近期的读操作。
 3. 从提高读写的命中率来说，缓存不仅仅有page cache ,还有 CPU的各级缓存，memcache, redis ，数据库等。
-4. 那么，网卡用到的一段内存算缓存，还是缓冲呢？基于以上理解，我觉得是缓冲，这样就不用死记啦！
+4. 那么，网卡用到的一段内存算cache，还是buffer呢？基于以上理解，我觉得是cache，这样就不用死记啦！
