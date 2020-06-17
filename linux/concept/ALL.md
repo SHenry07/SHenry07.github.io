@@ -57,6 +57,8 @@
 
 ![9ee6c1c5d88b0468af1a3280865a6b7a](../image/9ee6c1c5d88b0468af1a3280865a6b7a.png)
 
+![directory](directory.png)
+
 # 模块
 
 - CPU性能
