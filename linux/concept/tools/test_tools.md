@@ -17,7 +17,18 @@
  -S参数表示设置TCP协议的SYN（同步序列号），
  -p表示目的端口为80
  -i u100表示每隔100微秒发送一个网络帧
+ -c <num>
 ```
+#### traceroute
+
+```
+-tcp 
+-p 80 表示端口号
+-n 表示不对结果中的IP地址执行反向域名解析
+```
+
+
+
 #### curl
 
 ```
@@ -27,6 +38,10 @@
 -x, --proxy <[protocol://][user:password@]proxyhost[:port]>
 	Use the specified HTTP proxy. If the port number is not specified, it is assumed at port 1080.
 -X,--request 指定请求方法 Specifies a custom request method to use when communicating with the HTTP server. 
+-w表示只输出HTTP状态码及总时间，
+-o Write to file instead of stdout
+	 -w 'Http code: %{http_code}\nTotal time:%{time_total}s\n'
+-O Write output to a file named as the remote file
 ```
 
 #### fio

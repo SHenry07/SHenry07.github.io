@@ -51,7 +51,7 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
 是一个系统活动报告工具，既可以实时查看系统的当前活动，又可以配置保存和报告历史统计数据。
 
 ```
- -n DEV // 网卡收发
+ -n 网络接口（DEV）、网络接口错误（EDEV）、TCP、UDP、ICMP 等 // 网卡收发
  -r // 显示内存使用情况
  -S // 显示Swap使用情况
  -w // 每秒生成线程或者进程的数量
@@ -343,6 +343,23 @@ VMware Logs its messages to /var/log/vmkernel and not /var/log/message.
 ```shell
 smem --sort swap
 ```
+#### pcstat
+
+查看文件在内存中的缓存大小以及缓存比例。
+
+```shell
+#!/bin/bash
+if [ $(uname -m) == "x86_64" ] ; then
+    curl -L -o pcstat https://github.com/tobert/pcstat/raw/2014-05-02-01/pcstat.x86_64
+else
+    curl -L -o pcstat https://github.com/tobert/pcstat/raw/2014-05-02-01/pcstat.x86_32
+fi
+chmod 755 pcstat
+./pcstat 
+```
+
+https://github.com/tobert/pcstat/
+
 #### bbc套件 
 
 4.1以上的内核
@@ -476,8 +493,6 @@ $ hcache --top 3
 
 
 
-
-
 #### bbc套件
 
 ##### filetop
@@ -490,14 +505,66 @@ filetop 输出了 8 列内容，分别是线程 ID、线程命令行、读写次
 
 可以动态跟踪内核中的 open 系统调用
 
-
 ### network网络
+
+ifconfig 和 ip 分别属于软件包 net-tools 和 iproute2
+
+#### ip
+
+```shell
+$ ip -s addr show dev eth0
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 56:00:02:10:ea:68 brd ff:ff:ff:ff:ff:ff
+    inet 108.61.159.62/25 brd 108.61.159.127 scope global dynamic eth0
+       valid_lft 53370sec preferred_lft 53370sec
+    inet6 2001:19f0:5:112c:5400:2ff:fe10:ea68/64 scope global mngtmpaddr dynamic 
+       valid_lft 2591966sec preferred_lft 604766sec
+    inet6 fe80::5400:2ff:fe10:ea68/64 scope link 
+       valid_lft forever preferred_lft forever
+    RX: bytes  packets  errors  dropped overrun mcast   
+    25816728024 26553699 0       0       0       0       
+    TX: bytes  packets  errors  dropped carrier collsns 
+    24988117794 23132132 0       0       0       0  
+```
+
+网络收发的字节数、包数、错误数以及丢包情况，特别是 TX 和 RX 部分的 errors、dropped、overruns、carrier 以及 collisions 等指标不为 0 时，通常表示出现了网络 I/O 问题。其中：
+
+- errors 表示发生错误的数据包数，比如校验错误、帧同步错误等；
+- dropped 表示丢弃的数据包数，即数据包已经收到了 Ring Buffer，但因为内存不足等原因丢包；
+- overruns 表示超限数据包数，即网络 I/O 速度过快，导致 Ring Buffer 中的数据包来不及处理（队列满）而导致的丢包；
+- carrier 表示发生 carrirer 错误的数据包数，比如双工模式不匹配、物理电缆出现问题等；collisions 表示碰撞数据包数。
 
 #### ss
 
+```shell
+# -s 协议堆栈信息
+$ ss -tmpie
+
 ```
-ss -tmpie
+
+#### netstat
+
+```shell
+# -l 表示只显示监听套接字
+# -n 表示显示数字地址和端口(而不是名字)
+# -p 表示显示进程信息
+$ netstat -nlp | head -n 3
+# -s 协议栈统计信息 
+netstat -s | egrep "listen"
 ```
+
+#### pktgen
+
+```shell
+$ modprobe pktgen
+$ ps -ef | grep pktgen | grep -v grep
+root     26384     2  0 06:17 ?        00:00:00 [kpktgend_0]
+root     26385     2  0 06:17 ?        00:00:00 [kpktgend_1]
+$ ls /proc/net/pktgen/
+kpktgend_0  kpktgend_1  pgctrl
+```
+
+
 
 #### tcpdump 
 
@@ -506,7 +573,9 @@ ss -tmpie
 ```
 -i 指定网卡
 -n 不解析主机名和协议名
+-nn
 tcp port 80 表示只抓取tcp协议并且端口号为80的网络帧
+-w <filename> 写入到文件名
 ```
 
 ## 套件
@@ -582,9 +651,9 @@ This command performs a similar function to the **strace** tool. It monitors the
 $ man perf-trace
 ```
 
-![preview](../image/v2-88abc24a6eb5839220a3b24ddaac476f_r.jpg)
+![preview](../../image/v2-88abc24a6eb5839220a3b24ddaac476f_r.jpg)
 
-![img](../image/v2-74ffd2ad86f4245d6a2a9ed5ef8e0032_720w.png)
+![img](../../image/v2-74ffd2ad86f4245d6a2a9ed5ef8e0032_720w.png)
 
 [linux_pref_火焰图介绍](https://zhuanlan.zhihu.com/p/54276509)
 
@@ -717,9 +786,18 @@ numactl -H
 #### io
 
 ```shell
-# 餐盘状态
+# 磁盘状态
 /proc/diskstats
 /proc/slabinfo
+```
+
+#### net
+
+```shell
+/proc/sys/net/ipv4/tcp_abort_on_overflow
+- 为0表示如果三次握手第三步的时候全连接队列满了那么server扔掉client 发过来的ack（在server端认为连接还没建立起来）
+- 1表示第三步的时候如果全连接队列满了，server发送一个reset包给client，表示废掉这个握手过程和这个连接（本来在server端这个连接就还没建立起来）。
+
 ```
 
 

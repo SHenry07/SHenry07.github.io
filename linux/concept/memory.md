@@ -199,7 +199,7 @@ OOM其实是内核的一种保护机制。它监控进程的内存使用情况�
 
 https://my.oschina.net/fileoptions/blog/968320
 
-![img](memory.png)
+![img](../image/memory.png)
 
 # 内存结构
 
@@ -281,7 +281,7 @@ Buffer 既可以用作“将要写入磁盘数据的缓存”，也可以用作�
 
 Buffer 是对磁盘数据的缓存，而 Cache 是文件数据的缓存，它们既会用在读请求中，也会用在写请求中。
 
-直接IO`direct IO`是跳过Buffer，裸IO是跳过文件系统（还是有buffer的）
+**直接IO/`direct IO`是跳过Buffer，裸IO是跳过文件系统（还是有buffer的）**
 
 ## PSS RSS VSS
 
