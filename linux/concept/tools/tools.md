@@ -1,3 +1,11 @@
+```
+rpm -qa | grep <package name>
+rpm -ql <package name>
+
+```
+
+
+
 ## 排查工具
 
 #### sysstat 
@@ -10,7 +18,7 @@
 
 `$ mapstat -P ALL 1`
 
-### vmstat BUILT-IN  全面top之后第二选择
+#### vmstat BUILT-IN  top之后第二选择
 
 全局报告
 
@@ -76,6 +84,7 @@ kbactive，表示活跃内存，也就是最近使用过的内存，一般不会
 kbinact，表示非活跃内存，也就是不常访问的内存，有可能会被系统回收。
 kbswpcad the count of cached swap memory. swap中无需换入换出的cache, 为了提升IO
 %swpcad  Percentage of cached swap memory in relation to the amount of used swap space
+# tcp的连接数
 $  sar -n TCP,ETCP 1 
 11:40:05 AM  active/s passive/s    iseg/s    oseg/s
 11:40:06 AM      0.00      0.00      1.00      0.00
@@ -85,6 +94,16 @@ $  sar -n TCP,ETCP 1
 active/s：每秒本地发起的 TCP 连接数（例如通过 connect() 发起的连接）。
 passive/s：每秒远程发起的连接数（例如通过 accept() 接受的连接）。
 retrans/s：每秒 TCP 重传数。
+# 网卡设备
+$ sar -n DEV 1
+13:21:40 IFACE rxpck/s txpck/s rxkB/s txkB/s rxcmp/s txcmp/s rxmcst/s %ifutil
+13:21:41 eth0  18.00   20.00   5.79   4.25   0.00    0.00    0.00     0.00
+13:21:41 docker0 0.00  0.00    0.00   0.00   0.00    0.00    0.00     0.00
+13:21:41 lo    0.00    0.00    0.00   0.00   0.00    0.00    0.00     0.00
+rxpck/s 和 txpck/s 分别是接收和发送的 PPS，单位为包 / 秒。
+rxkB/s 和 txkB/s 分别是接收和发送的吞吐量，单位是 KB/ 秒。
+rxcmp/s 和 txcmp/s 分别是接收和发送的压缩数据包数，单位是包 / 秒。
+%ifutil 是网络接口的使用率，即半双工模式下为 (rxkB/s+txkB/s)/Bandwidth，而全双工模式下为 max(rxkB/s, txkB/s)/Bandwidth。
 ```
 
 #### pidstat 
@@ -213,11 +232,14 @@ $ -i 列出符合条件的进程。(4 6 协议 :端口 @ip) // lsof -i :80
 docker-pr 28212 root    4u  IPv6 325852      0t0  TCP *:webmin (LISTEN)
 ```
 
+### journalctl
 
-
-
-
-
+```
+-k  kernel 内核 
+-f  
+-u <service name>
+-xe 
+```
 
 ### strace  
 
@@ -282,6 +304,12 @@ python    9181            root    5u  IPv4 15449632      0t0  TCP localhost:3299
 | UTS      | uts_namespaces(7)    | hostname and NIS domain name                        |
 
 ---
+
+### CPU
+
+#### execsnoop 
+
+一个专为短时进程设计的工具。它通过 ftrace 实时监控进程的 exec() 行为，并输出短时进程的基本信息，包括进程 PID、父进程 PID、命令行参数以及执行的结果。
 
 ### 内存
 
@@ -363,6 +391,9 @@ https://github.com/tobert/pcstat/
 #### bbc套件 
 
 4.1以上的内核
+
+https://github.com/iovisor/bcc
+
 ```shell
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
 echo "deb https://repo.iovisor.org/apt/xenial xenial main" | sudo tee /etc/apt/sources.list.d/iovisor.list
@@ -370,6 +401,30 @@ sudo apt-get update
 sudo apt-get install -y bcc-tools libbcc-examples linux-headers-$(uname -r)
 export PATH=$PATH:/usr/share/bcc/tools
 ```
+
+centos 7 安装https://github.com/iovisor/bcc/issues/462
+
+> [升级内核](https://www.cnblogs.com/fan-gx/p/11006762.html)
+>
+> ```
+> yum install -y kernel-lt-4.4.103-1.el7.elrepo.x86_64.rpm #yum安装内核包
+> awk '$1=="menuentry" {print $2,$3,$4}' /etc/grub2.cfg  #查看默认启动顺序
+> 
+> #如果没有外网先安装key，下载地址：https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+> rpm --import RPM-GPG-KEY-elrepo.org
+> rpm -ivh kernel-lt-4.4.103-1.el7.elrepo.x86_64.rpm -y
+> 
+> #设置默认启动项，0是按menuentry顺序。比如要默认从第四个菜单项启动，数字改为3，若改为 saved，则默认为上次启动项。
+> sed -i "s/GRUB_DEFAULT=saved/GRUB_DEFAULT=0/g" /etc/default/grub	
+> grub2-mkconfig -o /boot/grub2/grub.cfg
+> reboot		#重启机器
+> 
+> uname -r	#重启后查看内核版本
+> 
+> #注：装新内核是占用/boot空间的，可以使用yum remove kernel-ml-4.10.11-1.el6.elrepo.x86_64方式清理不用的kernel
+> ```
+>
+> 
 
 ##### cachestat  cache命中情况
 
@@ -505,14 +560,16 @@ filetop 输出了 8 列内容，分别是线程 ID、线程命令行、读写次
 
 可以动态跟踪内核中的 open 系统调用
 
-### network网络
+### network
 
-ifconfig 和 ip 分别属于软件包 net-tools 和 iproute2
+>  ifconfig 和 ip 分别属于软件包 net-tools 和 iproute2
 
 #### ip
 
+`ip [ OPTIONS ] OBJECT { COMMAND | help }`
+
 ```shell
-$ ip -s addr show dev eth0
+$ ip -s addr show dev eth0 // -s[tatistics] 统计
 2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
     link/ether 56:00:02:10:ea:68 brd ff:ff:ff:ff:ff:ff
     inet 108.61.159.62/25 brd 108.61.159.127 scope global dynamic eth0
@@ -534,6 +591,12 @@ $ ip -s addr show dev eth0
 - overruns 表示超限数据包数，即网络 I/O 速度过快，导致 Ring Buffer 中的数据包来不及处理（队列满）而导致的丢包；
 - carrier 表示发生 carrirer 错误的数据包数，比如双工模式不匹配、物理电缆出现问题等；collisions 表示碰撞数据包数。
 
+#### ifconfig
+
+```shell
+$ ifconfig eth0
+```
+
 #### ss
 
 ```shell
@@ -553,32 +616,106 @@ $ netstat -nlp | head -n 3
 netstat -s | egrep "listen"
 ```
 
+#### sar
+
+`sar -n DEV 1` 数字1表示每隔1秒输出一组数据
+
+#### ethtool
+
+`ethtool eth0 | grep Speed`
+
 #### pktgen
 
-```shell
-$ modprobe pktgen
-$ ps -ef | grep pktgen | grep -v grep
-root     26384     2  0 06:17 ?        00:00:00 [kpktgend_0]
-root     26385     2  0 06:17 ?        00:00:00 [kpktgend_1]
-$ ls /proc/net/pktgen/
-kpktgend_0  kpktgend_1  pgctrl
+测试PPS的方法
+[详见](./test_tools.md)
+
+#### iperf3
+
+测试TCP/UDP的性能的方法
+[详见](./test_tools.md)
+
+
+#### ab
+
+测试HTTP
+[详见](./test_tools.md)
+
 ```
+# -c表示并发请求数为1000，-n表示总的请求数为10000
+$ ab -c 1000 -n 10000 http://192.168.0.30/```
+```
+#### wrk
+
+应用负载测试
+[详见](./test_tools.md)
+
+#### DNS
+
+##### nslookup
+
+```
+$ nslookup <域名>
+$ nslookup --debug <域名>
+# 反向查询 PTR
+$ nslookup -type=PTR 35.190.27.188 8.8.8.8
+```
+
+
+
+##### dig
+
+```
+# +trace 表示开启追踪查询  +nodnssec 表示禁止DNS安全扩展
+$ dig +trace +nodnssec <domain>
+# +short
+```
+
 
 
 
 #### tcpdump 
 
-是一个常用的网络抓包工具，常用来分析各种网络问题。
+是一个常用的网络抓包工具，常用来分析各种网络问题。它基于 [libpcap](https://www.tcpdump.org/) ，利用内核中的 AF_PACKET 套接字，抓取网络接口中传输的网络包；
+查看 tcpdump 的 [手册](https://www.tcpdump.org/manpages/tcpdump.1.html) ，以及 pcap-filter 的[手册](https://www.tcpdump.org/manpages/pcap-filter.7.html)，
 
 ```
--i 指定网卡
+-i 指定网络接口/网卡  默认是0号接口 any 表示所有接口
 -n 不解析主机名和协议名
--nn
+-nn 表示不解析抓包中的域名（即不反向解析）、协议以及端口号。
 tcp port 80 表示只抓取tcp协议并且端口号为80的网络帧
+host 35.190.27.188 ，表示只显示 IP 地址（包括源地址和目的地址）为 35.190.27.188 的包。
+or 表示或的关系
 -w <filename> 写入到文件名
+-c  限制要抓取网络包的个数
+-A 以ASCII格式显示网络包内容(不指定时只显示头部信息)
+-e 输出链路层的头部信息(MAC地址)
 ```
+过滤表达式类
+
+| 表达式                              | 示例                                       | 说明            |
+| ----------------------------------- | ------------------------------------------ | --------------- |
+| host, src host, dst host            | tcpdump -nn host 35.190.27.188             | 主机过滤        |
+| net, src net, dst net               | tcpdump -nn 192.168.0.0                    | 网络过滤        |
+| port, portrange, src port, dst port | tcpdump -nn dst port 80                    | 端口过滤        |
+| ip, ip6, arp, tcp, udp, icmp        | tcpdump -nn tcp                            | 协议过滤        |
+| and, or, not                        | tcpdump -nn icmp or udp                    | 逻辑表达式      |
+| tcp[tcpflags]                       | tcpdump -nn "tcp[tcpflags] & tcp-syn != 0" | 特定状态的TCP包 |
+|                                     |                                            |                 |
+
+基本格式: `时间戳 协议 源地址.源端口 > 目的地址.目的端口 网络包详细信息`
+
+#### systemtap
+
+[SystemTap](https://sourceware.org/systemtap/) 是 Linux 的一种动态追踪框架，它把用户提供的脚本，转换为内核模块来执行，用来监测和跟踪内核的行为。
 
 ## 套件
+
+### perf-tools
+
+`git clone --depth 1 https://github.com/brendangregg/perf-tools`
+
+[perf-tools](https://github.com/brendangregg/perf-tools)
+
 ### perf
 
 性能事件采样为基础, 可以划分为3类

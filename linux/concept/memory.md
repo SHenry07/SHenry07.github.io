@@ -26,7 +26,7 @@ Linux 内核给每个进程 都提供了一个独立的虚拟地址空间 ,并�
 
 虚拟地址空间的内部 又被分为**内核空间和用户空间**两部分, 不同字长(也就是单个CPU指令可以处理数据的最大长度)的处理器. 地址空间的范围也不同. 比如最常见的32位和64位系统
 
-![img](https://static001.geekbang.org/resource/image/ed/7b/ed8824c7a2e4020e2fdd2a104c70ab7b.png)
+<img src="https://static001.geekbang.org/resource/image/ed/7b/ed8824c7a2e4020e2fdd2a104c70ab7b.png" alt="img" style="zoom: 50%;" />
 
 物理内存只有进程真正去访问虚拟地址，**发生缺页中断时，才分配实际的物理页面**，建立物理内存和虚拟内存的映射关系。
 
@@ -40,7 +40,7 @@ Linux 内核给每个进程 都提供了一个独立的虚拟地址空间 ,并�
 
 将**虚拟内存地址**映射到**物理内存地址**. 为了完成内存映射, 内核为每个进程都维护了一张页表, 记录虚拟地址与物理地址的映射关系
 
-![img](https://static001.geekbang.org/resource/image/fc/b6/fcfbe2f8eb7c6090d82bf93ecdc1f0b6.png)
+<img src="https://static001.geekbang.org/resource/image/fc/b6/fcfbe2f8eb7c6090d82bf93ecdc1f0b6.png" alt="img" style="zoom:50%;" />
 
 页表实际上存储在CPU的MMU(Memory Management Unit 内存管理单元)中, 这样,正常情况下,处理器就可以直接通过硬件,找出要访问的内存
 
@@ -58,13 +58,13 @@ Linux 内核给每个进程 都提供了一个独立的虚拟地址空间 ,并�
 
   Linux 用的正是四级页表来管理内存页，如下图所示，虚拟地址被分为 5 个部分，前 4 个表项用于选择页，而最后一个索引表示页内偏移。
 
-  ![img](https://static001.geekbang.org/resource/image/b5/25/b5c9179ac64eb5c7ca26448065728325.png)
+  <img src="https://static001.geekbang.org/resource/image/b5/25/b5c9179ac64eb5c7ca26448065728325.png" alt="img" style="zoom:50%;" />
   
 - 大页，顾名思义，就是比普通页更大的内存块，常见的大小有 2MB 和 1GB。大页通常用在使用大量内存的进程上，比如 Oracle、DPDK 等。通过这些机制，在页表的映射下，进程就可以通过虚拟地址来访问物理内存了。那么具体到一个 Linux 进程中，这些内存又是怎么使用的呢
 
 ## 虚拟内存空间分布
 
-![32位虚拟内存空间分布](https://static001.geekbang.org/resource/image/71/5d/71a754523386cc75f4456a5eabc93c5d.png)
+<img src="https://static001.geekbang.org/resource/image/71/5d/71a754523386cc75f4456a5eabc93c5d.png" alt="32位虚拟内存空间分布" style="zoom:50%;" />
 
 用户空间内存，从低到高分别是五种不同的内存段。
 
@@ -199,7 +199,7 @@ OOM其实是内核的一种保护机制。它监控进程的内存使用情况�
 
 https://my.oschina.net/fileoptions/blog/968320
 
-![img](../image/memory.png)
+<img src="../image/memory.png" alt="img" style="zoom: 33%;" />
 
 # 内存结构
 
@@ -322,7 +322,18 @@ the process's proportional share of this mapping ("Pss"), the number of clean an
 - **PSS**- Proportional Set Size 实际使用的物理内存（比例分配共享库占用的内存）
 - **USS**- Unique Set Size 进程独自占用的物理内存（不包含共享库占用的内存）
 
-**一般来说内存占用大小有如下规律：VSS >= RSS >= PSS >= USS**
+**一般来说内存占用大小有如下规律：VSS >= RSS >= PSS >= USS**其中VSS>RSS>PSS>USS
+ 对于RSS PSS USS的统计，可以通过代码简单的
+ `system/extras/libpagemap/pm_map.c`
+
+```php
+usage.rss += (count >= 1) ? map->proc->ker->pagesize : (0);
+usage.pss += (count >= 1) ? (map->proc->ker->pagesize / count) : (0);
+usage.uss += (count == 1) ? (map->proc->ker->pagesize) : (0);
+```
+
+通过上面的算法可以看出，USS部分是进程独占的部分，PSS是USS+共享/count， RSS是USS+共享部分
+ 如果我们要对进程退出后内存回收的统计的话，应该使用USS部分
 
 **VSS** (reported as VSZ from ps) is the total accessible address space of a process.This size also includes memory that may not be resident in RAM like mallocs that have been allocated but not written to. VSS is of very little use for determing real memory usage of a process.
 
