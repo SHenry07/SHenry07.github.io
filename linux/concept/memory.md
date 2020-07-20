@@ -194,10 +194,11 @@ OOM其实是内核的一种保护机制。它监控进程的内存使用情况�
 
 
 
-
 # 总结
 
 https://my.oschina.net/fileoptions/blog/968320
+
+![image](../image/memory_arch.png)
 
 <img src="../image/memory.png" alt="img" style="zoom: 33%;" />
 

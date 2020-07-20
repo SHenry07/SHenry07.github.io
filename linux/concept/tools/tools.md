@@ -42,7 +42,7 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
 ```
   * cs(context switch) 每秒上下文切换的次数
 
-  * in(interrupt) 每秒终端的次数
+  * in(interrupt) 每秒中断的次数
 
   * r (Running or Runnable)就绪队列的长度, 也就是正在运行和等待CPU的进程数
 
@@ -62,8 +62,8 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
  -n 网络接口（DEV）、网络接口错误（EDEV）、TCP、UDP、ICMP 等 // 网卡收发
  -r // 显示内存使用情况
  -S // 显示Swap使用情况
- -w // 每秒生成线程或者进程的数量
  -B // 查看页统计信息  内存饱和度，即内存换页量？
+ -w // 每秒生成线程或者进程的数量
  -n TCP,ETCP // TCP状态
  sar 2 5       --> will report CPU utilization every two seconds, five times.
 ```
@@ -74,6 +74,7 @@ $ sar --human -r -S 1 5 # 以G 适合人眼阅读的方式输出
 # 内存的使用情况
 04:44:06 kbmemfree kbavail kbmemused  %memused kbbuffers kbcached  kbcommit %commit kbactive kbinact kbdirty
 04:44:07 152780   6525716   8016528     98.13   6530440     51316   1691736  10.22   867124  6869332   0
+
 # Swap 的使用情况
 04:44:06    kbswpfree kbswpused  %swpused  kbswpcad   %swpcad
 04:44:07      8384508      4096      0.05        52      1.27
@@ -84,6 +85,22 @@ kbactive，表示活跃内存，也就是最近使用过的内存，一般不会
 kbinact，表示非活跃内存，也就是不常访问的内存，有可能会被系统回收。
 kbswpcad the count of cached swap memory. swap中无需换入换出的cache, 为了提升IO
 %swpcad  Percentage of cached swap memory in relation to the amount of used swap space
+
+# sar -B 1 
+22时32分20秒  pgpgin/s pgpgout/s   fault/s  majflt/s  pgfree/s pgscank/s pgscand/s pgsteal/s    %vmeff
+22时32分21秒      0.00      0.00     29.00      0.00    354.00      0.00      0.00      0.00      0.00
+22时32分22秒      0.00     64.00     22.00      0.00    290.00      0.00      0.00      0.00      0.00
+22时32分23秒      0.00     80.00    950.00      0.00   1243.00      0.00      0.00      0.00      0.00
+22时32分24秒      0.00      0.00     15.00      0.00    259.00      0.00      0.00      0.00      0.00
+22时32分25秒      0.00      0.00     18.00      0.00    519.00      0.00      0.00      0.00      0.00
+22时32分26秒      0.00      0.00     16.00      0.00    283.00      0.00      0.00      0.00      0.00
+22时32分27秒      0.00    644.00     54.00      0.00    943.00      0.00      0.00      0.00      0.00
+平均时间:      0.00    112.57    157.71      0.00    555.86      0.00      0.00      0.00      0.00
+
+pgscank: ksawpd 扫描缓存页寻找可以free的page
+pgscand: 直接扫面的系统缓存页
+pgsteal: 从cache回收的page页
+
 # tcp的连接数
 $  sar -n TCP,ETCP 1 
 11:40:05 AM  active/s passive/s    iseg/s    oseg/s
@@ -93,7 +110,9 @@ $  sar -n TCP,ETCP 1
 11:40:06 AM      0.00      0.00      0.00      0.00      0.00
 active/s：每秒本地发起的 TCP 连接数（例如通过 connect() 发起的连接）。
 passive/s：每秒远程发起的连接数（例如通过 accept() 接受的连接）。
-retrans/s：每秒 TCP 重传数。
+retrans/s：每秒 TCP 重传数
+
+
 # 网卡设备
 $ sar -n DEV 1
 13:21:40 IFACE rxpck/s txpck/s rxkB/s txkB/s rxcmp/s txcmp/s rxmcst/s %ifutil
@@ -247,14 +266,28 @@ docker-pr 28212 root    4u  IPv6 325852      0t0  TCP *:webmin (LISTEN)
 
 `-p PID`
 
-`$ strace -p 12280 2>&1 | grep write `
+`2>&1` 输出到stdout 以便于grep
+
+`$ strace -p 12280 2>&1 | grep write ` 
 
 ```
 -f  开启追踪子进程和子线程Trace child processes as they are created by  currently  traced  processes`
 -T表示显示系统调用的时长，
 -tt 显示跟踪时间	
 -e [string] grep出对应字段
+
+
+$ strace -f wrk --latency -c 100 -t 2 --timeout 2 http://172.21.8.109:8080 2>&1 | grep TCP_NODELAY
+...
+setsockopt(52, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+...
 ```
+### nmon
+
+查看cpu 网络 内存的综合性工具
+
+<img src="../../image/1021948429.jpg" alt="example" style="zoom: 67%;" />
+
 #### dstat
 
 io分析利器(磁盘io/网络io),其余类似`vmstat`
@@ -405,9 +438,16 @@ export PATH=$PATH:/usr/share/bcc/tools
 centos 7 安装https://github.com/iovisor/bcc/issues/462
 
 > [升级内核](https://www.cnblogs.com/fan-gx/p/11006762.html)
+> [升级内核2](https://www.cnblogs.com/luckyall/p/12450768.html)
 >
 > ```
-> yum install -y kernel-lt-4.4.103-1.el7.elrepo.x86_64.rpm #yum安装内核包
+> 导入公钥
+> rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+> 安装ELRepo
+> rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-3.el7.elrepo.noarch.rpm
+> yum --disablerepo="*" --enablerepo="elrepo-kernel" list available
+> 
+> yum install -y kernel-lt #yum安装内核包
 > awk '$1=="menuentry" {print $2,$3,$4}' /etc/grub2.cfg  #查看默认启动顺序
 > 
 > #如果没有外网先安装key，下载地址：https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
@@ -599,6 +639,8 @@ $ ifconfig eth0
 
 #### ss
 
+查看系统中的socket的状态， 可以替换netstat
+
 ```shell
 # -s 协议堆栈信息
 $ ss -tmpie
@@ -620,34 +662,41 @@ netstat -s | egrep "listen"
 
 `sar -n DEV 1` 数字1表示每隔1秒输出一组数据
 
+#### nethogs 
+
+GUI查看**进程的**BPS 吞吐量
+
+#### iftop
+
+GUI查看**IP地址的**BPS 吞吐量
+
 #### ethtool
 
 `ethtool eth0 | grep Speed`
 
-#### pktgen
+#### route 
 
-测试PPS的方法
-[详见](./test_tools.md)
+`-n`
 
-#### iperf3
+`add del等`
 
-测试TCP/UDP的性能的方法
-[详见](./test_tools.md)
-
-
-#### ab
-
-测试HTTP
-[详见](./test_tools.md)
+#### traceroute
 
 ```
-# -c表示并发请求数为1000，-n表示总的请求数为10000
-$ ab -c 1000 -n 10000 http://192.168.0.30/```
+# --tcp表示使用TCP协议，-p表示端口号，-n表示不对结果中的IP地址执行反向域名解析
+$ traceroute --tcp -p 80 -n baidu.com
+# -c表示发送3次请求，-S表示设置TCP SYN，-p表示端口号为80
+$ hping3 -c 3 -S -p 80 baidu.com
 ```
-#### wrk
 
-应用负载测试
-[详见](./test_tools.md)
+traceroute 会在路由的每一跳发送三个包，并在收到响应后，输出往返延时。如果无响应或者响应超时（默认 5s），就会输出一个星号
+
+#### **mtr**
+
+图形化的traceroute `mtr 主机名/域名/IP`
+
+结合了ping, traceroute,nslookup的相关特性
+
 
 #### DNS
 
@@ -700,13 +749,94 @@ or 表示或的关系
 | ip, ip6, arp, tcp, udp, icmp        | tcpdump -nn tcp                            | 协议过滤        |
 | and, or, not                        | tcpdump -nn icmp or udp                    | 逻辑表达式      |
 | tcp[tcpflags]                       | tcpdump -nn "tcp[tcpflags] & tcp-syn != 0" | 特定状态的TCP包 |
-|                                     |                                            |                 |
 
 基本格式: `时间戳 协议 源地址.源端口 > 目的地址.目的端口 网络包详细信息`
 
 #### systemtap
 
 [SystemTap](https://sourceware.org/systemtap/) 是 Linux 的一种动态追踪框架，它把用户提供的脚本，转换为内核模块来执行，用来监测和跟踪内核的行为。
+
+```
+# yum install systemtap
+stap --all-modules <.stp>
+```
+
+```
+# centos8 https://bugs.centos.org/view.php?id=17076
+dnf config-manager --set-enabled base-debuginfo
+dnf install kernel-debuginfo-$(uname -r)
+
+yum install systemtap
+```
+
+#### conntrack 
+
+查看和管理连接追踪状态
+```
+# -L表示列表，-o表示以扩展格式显示
+$ conntrack -L -o extended | head
+ipv4     2 tcp      6 7 TIME_WAIT src=192.168.0.2 dst=192.168.0.96 sport=51744 dport=8080 src=172.17.0.2 dst=192.168.0.2 sport=8080 dport=51744 [ASSURED] mark=0 use=1
+ipv4     2 tcp      6 6 TIME_WAIT src=192.168.0.2 dst=192.168.0.96 sport=51524 dport=8080 src=172.17.0.2 dst=192.168.0.2 sport=8080 dport=51524 [ASSURED] mark=0 use=1
+
+
+# 统计总的连接跟踪数
+$ conntrack -L -o extended | wc -l
+14289
+
+# 统计TCP协议各个状态的连接跟踪数
+$ conntrack -L -o extended | awk '/^.*tcp.*$/ {sum[$6]++} END {for(i in sum) print i, sum[i]}'
+SYN_RECV 4
+CLOSE_WAIT 9
+ESTABLISHED 2877
+FIN_WAIT 3
+SYN_SENT 2113
+TIME_WAIT 9283
+
+# 统计各个源IP的连接跟踪数
+$ conntrack -L -o extended | awk '{print $7}' | cut -d "=" -f 2 | sort | uniq -c | sort -nr | head -n 10
+  14116 192.168.0.2
+    172 192.168.0.96
+```
+### 网络控制
+#### iptables
+
+#### tc
+#### trickle
+ 一款轻量级的用户空间带宽控制管理的工具
+
+### 网络测试套件
+#### nmap
+
+#### hpin3
+
+#### ping
+
+#### pktgen
+
+测试PPS的方法
+[详见](./test_tools.md)
+
+#### iperf3
+
+测试TCP/UDP的性能的方法
+[详见](./test_tools.md)
+
+
+#### ab
+
+测试HTTP
+[详见](./test_tools.md)
+
+```
+# -c表示并发请求数为1000，-n表示总的请求数为10000
+$ ab -c 1000 -n 10000 http://192.168.0.30/```
+```
+#### wrk
+
+应用负载测试
+[详见](./test_tools.md)
+
+
 
 ## 套件
 
@@ -750,6 +880,7 @@ E 展开
 C 收起
 –tui   交互式的文本显示窗口
 –stdio 文本显示窗口。
+-g graph,0dj
 ```
 
 >  **指定符号路径为容器文件系统的路径**。比如对于第 05 讲的应用，你可以执行下面这个命令：
@@ -896,7 +1027,7 @@ SReclaimable:     179508 kB
 ```shell
 # 调整系统定期回收内存的阈值
 /proc/sys/vm/min_free_kbytes
-# 调整文件页和匿名页的回收倾向。
+# 调整文件页和匿名页的回收倾向。  即调整使用Swap的积极程度
 /proc/sys/vm/swappiness
 A low swappiness value is recommended for database workloads. For example, for Oracle databases, Red Hat recommends a swappiness value of 10.
 ```
@@ -934,7 +1065,9 @@ numactl -H
 /proc/sys/net/ipv4/tcp_abort_on_overflow
 - 为0表示如果三次握手第三步的时候全连接队列满了那么server扔掉client 发过来的ack（在server端认为连接还没建立起来）
 - 1表示第三步的时候如果全连接队列满了，server发送一个reset包给client，表示废掉这个握手过程和这个连接（本来在server端这个连接就还没建立起来）。
-
+# 网络接口的网络收发情况/PPS
+/proc/net/dev  # 网络接口的PPS
+/sys/class/net/<网卡名称>/statistics/*
 ```
 
 
@@ -947,6 +1080,8 @@ numactl -H
 
 ![img](https://static001.geekbang.org/resource/image/8f/ed/8f477035fc4348a1f80bde3117a7dfed.png)
 
+![img](https://user-images.githubusercontent.com/7421004/87852040-3a7be500-c931-11ea-9766-6b9850a07a13.png)
+
 ![img](https://static001.geekbang.org/resource/image/52/9b/52bb55fba133401889206d02c224769b.png)
 
 ![img](https://static001.geekbang.org/resource/image/79/f8/79ad5caf0a2c105b7e9ce77877d493f8.png)
@@ -954,3 +1089,7 @@ numactl -H
 ![img](https://static001.geekbang.org/resource/image/c2/a3/c232dcb4185f7b7ba95c126889cf6fa3.png)
 
 ![img](https://static001.geekbang.org/resource/image/c4/e9/c48b6664c6d334695ed881d5047446e9.png)
+
+![img](D:\Dropbox\linux\image\a1eb07e281e5795be83c11d7255c543b.png)
+
+![img](D:\Dropbox\linux\image\0d87b39b89a1b7f325fc5477c0182ea0.png)

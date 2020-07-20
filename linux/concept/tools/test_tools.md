@@ -32,6 +32,8 @@
 -o Write to file instead of stdout
 	 -w 'Http code: %{http_code}\nTotal time:%{time_total}s\n'
 -O Write output to a file named as the remote file
+--connect-timeout <num> 超时时间 10
+-s Silent or quiet mode. Don't show progress meter or error messages.  Makes Curl mute
 ```
 
 ### 硬盘/IO
@@ -83,6 +85,7 @@ fio -name=write -direct=1 -iodepth=64 -rw=write -ioengine=libaio -bs=4k -size=1G
  -S参数表示设置TCP协议的SYN（同步序列号），
  -p表示目的端口为80
  -i u100表示每隔100微秒发送一个网络帧
+   --flood no replies will be shown
  -c <num>
  -ltn 列出所有TCP端口 hping -p 发起TCP探测 -S设置SYN包  -a 伪造IP模拟DDOS
 ```
@@ -179,7 +182,7 @@ $ ab -c 1000 -n 10000 http://192.168.0.30/```
 **安装**
 
 ```
-$ https://github.com/wg/wrk
+$ git clone --depth=1 https://github.com/wg/wrk
 $ cd wrk
 $ apt-get install build-essential -y
 $ make
@@ -200,6 +203,8 @@ Running 10s test @ http://192.168.0.30/
   Socket errors: connect 0, read 0, write 0, timeout 179
 Requests/sec:   9641.31
 Transfer/sec:      7.82MB
+# --latency TCP 延迟确认（Delayed ACK）的最小超时时间。
+$ wrk --latency -c 100 -t 2 --timeout 2 http://192.168.0.30/
 ```
 
 当然，wrk 最大的优势，是其内置的 LuaJIT，可以用来实现复杂场景的性能测试。wrk 在调用 Lua 脚本时，可以将 HTTP 请求分为三个阶段，即 setup、running、done，
