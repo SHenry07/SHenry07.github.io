@@ -39,6 +39,8 @@
 
 ![img](../image/network.png)
 
+![img](D:\Dropbox\linux\image\work2.png)
+
 #  性能指标
 
 实际上，我们通常用带宽、吞吐量、延时、PPS（Packet Per Second）等指标衡量网络的性能。

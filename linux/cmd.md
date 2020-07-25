@@ -31,3 +31,15 @@ https://www.cnblogs.com/blog-lhong/p/11712069.html
   xfs格式的分区用xfs_growfs 命令对容量重新扩容。
   `xfs_growfs /dev/mapper/centos-root`
 
+# yum 
+
+`yum install yum-plugin-downloadonly`
+
+yum自动下载RPM包及其所有依赖的包至/root/rpm目录：
+
+`yum install --downloadonly --downloaddir=/root/rpm <package-name>`
+切换到下载目录rpm中批量安装：
+
+`rpm -ivh * --nodeps --force`
+
+`yum localinstall *.rpm -y`

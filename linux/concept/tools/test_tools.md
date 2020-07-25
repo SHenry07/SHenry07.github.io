@@ -34,6 +34,8 @@
 -O Write output to a file named as the remote file
 --connect-timeout <num> 超时时间 10
 -s Silent or quiet mode. Don't show progress meter or error messages.  Makes Curl mute
+--max-time 3 最多重试3次
+
 ```
 
 ### 硬盘/IO
@@ -87,7 +89,11 @@ fio -name=write -direct=1 -iodepth=64 -rw=write -ioengine=libaio -bs=4k -size=1G
  -i u100表示每隔100微秒发送一个网络帧
    --flood no replies will be shown
  -c <num>
- -ltn 列出所有TCP端口 hping -p 发起TCP探测 -S设置SYN包  -a 伪造IP模拟DDOS
+ -ltn 列出所有TCP端口
+ -a 伪造IP模拟DDOS
+ 
+ DUP! len=44 ip=10.13.30.109 ttl=58 DF id=0 sport=80 flags=SA seq=5 win=65535 rtt=3059.0 ms
+# DUP 表示收到了重复包
 ```
 
 #### pktgen

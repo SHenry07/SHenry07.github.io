@@ -218,6 +218,9 @@ ps -eF
 -F: Extra full format.相比-f 会输出内存信息RSS
 -f Do full-format listing.
 -l: 长格式输出,显示更详细的信息
+--ppid: 
+ps -f --ppid 2 -p 显示pid为2的所有子进程，
+由于2号进程为kthreadd进程，在内核态运行，用来管理内核线程，所以其展示的就是所有内核进程
 # 所有线程
 ps -eLF
 THREAD DISPLAY
@@ -441,6 +444,15 @@ centos 7 安装https://github.com/iovisor/bcc/issues/462
 > [升级内核2](https://www.cnblogs.com/luckyall/p/12450768.html)
 >
 > ```
+> # 自己测试简易版
+> yum install elrepo-release
+> yum --disablerepo="*" --enablerepo="elrepo-kernel" list available
+> yum --enablerepo=elrepo-kernel install kernel-lt
+> ```
+>
+> 
+>
+> ```
 > 导入公钥
 > rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
 > 安装ELRepo
@@ -635,6 +647,8 @@ $ ip -s addr show dev eth0 // -s[tatistics] 统计
 
 ```shell
 $ ifconfig eth0
+# 调整包大小
+$ ifconfig eth0 mtu 1500 
 ```
 
 #### ss
@@ -654,9 +668,58 @@ $ ss -tmpie
 # -n 表示显示数字地址和端口(而不是名字)
 # -p 表示显示进程信息
 $ netstat -nlp | head -n 3
-# -s 协议栈统计信息 
-netstat -s | egrep "listen"
+# -s 协议栈 统计信息 
+$ netstat -s | egrep "listen"
+$ netstat -s
+Ip:
+    Forwarding: 1          //开启转发
+    31 total packets received    //总收包数
+    0 forwarded            //转发包数
+    0 incoming packets discarded  //接收丢包数
+    25 incoming packets delivered  //接收的数据包数
+    15 requests sent out      //发出的数据包数
+Icmp:
+    0 ICMP messages received    //收到的ICMP包数
+    0 input ICMP message failed    //收到ICMP失败数
+    ICMP input histogram:
+    0 ICMP messages sent      //ICMP发送数
+    0 ICMP messages failed      //ICMP失败数
+    ICMP output histogram:
+Tcp:
+    0 active connection openings  //主动连接数
+    0 passive connection openings  //被动连接数
+    11 failed connection attempts  //失败连接尝试数
+    0 connection resets received  //接收的连接重置数
+    0 connections established    //建立连接数
+    25 segments received      //已接收报文数
+    21 segments sent out      //已发送报文数
+    4 segments retransmitted    //重传报文数
+    0 bad segments received      //错误报文数
+    0 resets sent          //发出的连接重置数
+Udp:
+    0 packets received
+    ...
+TcpExt: // 扩展TCP指标
+    11 resets received for embryonic SYN_RECV sockets  //半连接重置数
+    0 packet headers predicted
+    TCPTimeouts: 7    //超时数
+    TCPSynRetrans: 4  //SYN重传数
+  ...
+# -i 网卡包数 统计信息
+Iface      MTU    RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg
+eth0       100      123      0     38 0             7      0      0      0 BMRU
+lo       65536        0      0      0 0             0      0      0      0 LRU
 ```
+
+| 输出                        | 含义                                                |
+| --------------------------- | --------------------------------------------------- |
+| RX-OK                       | 接收时(到)的总包数                                  |
+| RX-DRP                      | 总错误数                                            |
+| RX-DRP                      | 进入Ring Buffer后因其他原因(如内存不足)导致的丢包数 |
+| RX-OVR                      | Ring Buffer 溢出导致的丢包数                        |
+| TX-Ok, TX-ERR,TX-DRP,TX-OVR | 代表发送时                                          |
+
+
 
 #### sar
 
@@ -672,7 +735,15 @@ GUI查看**IP地址的**BPS 吞吐量
 
 #### ethtool
 
+ethtool DEVNAME Display standard information about device
+
+能展示的**统计**信息较多，详见帮助
+
+`ethtool DEVNAME`
+
 `ethtool eth0 | grep Speed`
+
+`ethtool -S`
 
 #### route 
 
@@ -800,7 +871,31 @@ $ conntrack -L -o extended | awk '{print $7}' | cut -d "=" -f 2 | sort | uniq -c
 ### 网络控制
 #### iptables
 
+```
+-t 指定表
+# 查看规则
+$ iptables -nvL 
+# 删除指定规则
+$ iptables -t filter -D INPUT -m statistic --mode random --probability 0.30 -j DROP
+$ iptables -t filter -D OUTPUT -m statistic --mode random --probability 0.30 -j DROP
+```
+
+#### iptables-save
+
+查看所有规则
+
 #### tc
+
+```shell
+$ tc -s qdisc show dev eth0
+qdisc netem 8002: root refcnt 2 limit 1000 loss 30%
+ Sent 374 bytes 7 pkt (dropped 3, overlimits 0 requeues 0) 
+ backlog 0b 0p requeues 0 
+# 回复的响应包，被 netem 模块给丢了。
+```
+
+
+
 #### trickle
  一款轻量级的用户空间带宽控制管理的工具
 
@@ -839,6 +934,10 @@ $ ab -c 1000 -n 10000 http://192.168.0.30/```
 
 
 ## 套件
+
+### 火焰图
+
+https://github.com/brendangregg/FlameGraph 
 
 ### perf-tools
 
@@ -923,7 +1022,7 @@ $ man perf-trace
 
 ![img](../../image/v2-74ffd2ad86f4245d6a2a9ed5ef8e0032_720w.png)
 
-[linux_pref_火焰图介绍](https://zhuanlan.zhihu.com/p/54276509)
+#### [linux_pref_火焰图介绍](https://zhuanlan.zhihu.com/p/54276509)
 
 ### 日志文件
 
