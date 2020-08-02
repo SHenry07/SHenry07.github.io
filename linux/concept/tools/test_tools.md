@@ -1,4 +1,14 @@
-## 压测/检测工具
+# 基准测试工具
+
+除了性能分析外，很多时候，我们还需要对系统性能进行基准测试。比如，
+- 在文件系统和磁盘 I/O 模块中，使用 fio 工具，测试了磁盘 I/O 的性能。
+- 在网络模块中，使用 iperf、pktgen 等，测试了网络的性能。
+- 在很多基于 Nginx 的案例中，则使用 ab、wrk 等，测试 Nginx 应用的性能。
+
+![img](../../image/benchmark.png)
+
+[来源](http://www.brendangregg.com/linuxperf.html)
+
 #### stress 
 
 是一个 Linux 系统压力测试工具，这里我们用作异常进程模拟平均负载升高的场景。

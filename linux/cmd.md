@@ -43,3 +43,23 @@ yum自动下载RPM包及其所有依赖的包至/root/rpm目录：
 `rpm -ivh * --nodeps --force`
 
 `yum localinstall *.rpm -y`
+
+# rpm
+
+```shell
+# 查看依赖
+# rpm -qrp <package_name>
+$  rpm -q --requires -p wireshark-1.2.2-1.fc12.i686.rpm
+# 查询 谁提供依赖
+$ rpm -q --whatprovides libpcap.so.1
+# 查找是否安装此包
+rpm -qa | grep <package name>
+# 列出安装包的所有文件
+rpm -ql <package name>
+```
+
+# VIM
+
+vim 去除行尾^M
+
+`删除行尾的^M：%s/\r//g`

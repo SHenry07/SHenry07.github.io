@@ -1,10 +1,17 @@
-```
-rpm -qa | grep <package name>
-rpm -ql <package name>
+## 如何了解工具
 
-```
+关于工具手册的查看，man 应该是我们最熟悉的方法，我在专栏中多次介绍过。实际上，除了 man 之外，还有另外一个查询命令手册的方法，也就是 info。
+info 可以理解为 man 的详细版本，提供了诸如节点跳转等更强大的功能。相对来说，man 的输出比较简洁，而 info 的输出更详细。所以，我们通常使用 man 来查询工具的使用方法，只有在 man 的输出不太好理解时，才会再去参考 info 文档。
 
+## 前提
 
+前提一定是已知哪个工具可用。如果你还不知道要用哪个工具，就要根据想了解的指标，去查找有哪些工具可用。这其中：
+
+- 有些工具不需要额外安装，就可以直接使用，比如内核的 /proc 文件系统；
+- 而有些工具，则需要安装额外的软件包，比如 sar、pidstat、iostat 等。
+- 在选择性能工具时，除了要考虑性能指标这个目的外，还要结合待分析的环境来综合考虑。比如，实际环境是否允许安装软件包，是否需要新的内核版本等。
+
+![9ee6c1c5d88b0468af1a3280865a6b7a](../../image/9ee6c1c5d88b0468af1a3280865a6b7a.png)
 
 ## 排查工具
 
@@ -57,6 +64,10 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
 ### sar  
 
 是一个系统活动报告工具，既可以实时查看系统的当前活动，又可以配置保存和报告历史统计数据。
+
+> Cannot open /var/log/sysstat/sa28: No such file or directory
+>
+> vim /etc/dedault/sysstat
 
 ```
  -n 网络接口（DEV）、网络接口错误（EDEV）、TCP、UDP、ICMP 等 // 网卡收发
@@ -119,65 +130,11 @@ $ sar -n DEV 1
 13:21:41 eth0  18.00   20.00   5.79   4.25   0.00    0.00    0.00     0.00
 13:21:41 docker0 0.00  0.00    0.00   0.00   0.00    0.00    0.00     0.00
 13:21:41 lo    0.00    0.00    0.00   0.00   0.00    0.00    0.00     0.00
-rxpck/s 和 txpck/s 分别是接收和发送的 PPS，单位为包 / 秒。
-rxkB/s 和 txkB/s 分别是接收和发送的吞吐量，单位是 KB/ 秒。
-rxcmp/s 和 txcmp/s 分别是接收和发送的压缩数据包数，单位是包 / 秒。
+rxpck/s 和 txpck/s 分别是接收和发送的 PPS，单位为包/秒。
+rxkB/s 和 txkB/s 分别是接收和发送的吞吐量，单位是 KB/秒。
+rxcmp/s 和 txcmp/s 分别是接收和发送的压缩数据包数，单位是包/d秒。
 %ifutil 是网络接口的使用率，即半双工模式下为 (rxkB/s+txkB/s)/Bandwidth，而全双工模式下为 max(rxkB/s, txkB/s)/Bandwidth。
 ```
-
-#### pidstat 
-
-是一个常用的进程性能分析工具，用来实时查看进程的 CPU、内存、I/O 以及上下文切换等性能指标
-
-`pidstat -wut -p XX 1`
-
-```shell
-pidstat -u 5 1 # 5秒内的cpu变化 输出一次
-pidstat -d 5 1 #              io
-13:39:51 UID PID kB_rd/s kB_wr/s kB_ccwr/s iodelay Command 
-13:39:52 102 916 0.00     4.00        0.00     0  rsyslogd
-# 还有很多options man一下吧 
-```
-- kB_rd/s 每秒读取的数据大小
-- kB_wr/s 每秒发出的写请求数据大小
-- kB_ccwr/s 每秒取消的写请求数据大小
-- iodelay   块I/O延迟,包括等待同步块I/O和换入块I/O结束的时间, 单位是时钟周期
-```
-pidstat -w 5 # 每隔5秒输出一组进程task上下文切换 Report task switching activity
-Average:      UID       PID   cswch/s nvcswch/s  Command
-Average:        0         1      0.50      0.00  systemd
-Average:        0         3      0.30      0.00  ksoftirqd/0
-Average:        0         7      0.15      0.00  migration/0
-Average:        0         9     37.16      0.00  rcu_sched
-Average:        0        11      0.25      0.00  watchdog/0
-Average:        0        12      0.25      0.00  watchdog/1
-
-pidstat -wt 1 # -t输出线程的指标 
-```
-
-- cswch(voluntary context switches) 每秒自愿上下文切换的次数
-- nvcswch(non voluntary context switches)每秒非自愿上下文切换的次数
-
->  pidstat -u 中， %wait 表示进程等待 CPU 的时间百分比。
->
-> top 中 ，iowait% 则表示等待 I/O 的 CPU 时间百分比。
->
-> 等待 CPU 的进程已经在 CPU 的就绪队列中，处于运行状态；而等待 I/O 的进程则处于不可中断状态。
-
-```shell
--r Report page faults and memory utilization.
-$ pidstat -r 2
-Average:      UID       PID  minflt/s  majflt/s     VSZ    RSS   %MEM  Command
-Average:        0       889      7.07      0.00   19452    608   0.00  irqbalance
-Average:        0      2618      0.07      0.00   82336    756   0.00  zabbix_agentd
-Average:     3306      8834   2417.24      0.00 100633928 84807260  85.83  mysqld
-Average:      995     14632      0.07      0.00  122896  25828   0.03  node_exporter
-Average:      995     14742      2.14      0.00  118296  22471   0.02  mysqld_exporter
-
-```
-
-- minflt/s:   进程平均每秒的minor fault，这些错误不需要从磁盘获取数据  加载到 内存页。 Total number of minor faults the task has made per second, those which have **not required **loading a memory page from disk
-- majflt/s:  进程平均每s的major fault，这些错误**需要**从磁盘获取数据 加载到  内存页 Total number of major faults the task has made per second, those which have **required** loading a memory page from disk.
 
 ### top
 
@@ -246,13 +203,7 @@ $ ps -e -o stat,ppid,pid,cmd | egrep '^[Zz]'
 $ ps -efT
 ```
 
-### lsof
 
-```shell
-$ -p 列出指定进程号所打开的文件
-$ -i 列出符合条件的进程。(4 6 协议 :端口 @ip) // lsof -i :80
-docker-pr 28212 root    4u  IPv6 325852      0t0  TCP *:webmin (LISTEN)
-```
 
 ### journalctl
 
@@ -263,33 +214,16 @@ docker-pr 28212 root    4u  IPv6 325852      0t0  TCP *:webmin (LISTEN)
 -xe 
 ```
 
-### strace  
 
-正是最常用的跟踪进程系统调用的工具。
-
-`-p PID`
-
-`2>&1` 输出到stdout 以便于grep
-
-`$ strace -p 12280 2>&1 | grep write ` 
-
-```
--f  开启追踪子进程和子线程Trace child processes as they are created by  currently  traced  processes`
--T表示显示系统调用的时长，
--tt 显示跟踪时间	
--e [string] grep出对应字段
-
-
-$ strace -f wrk --latency -c 100 -t 2 --timeout 2 http://172.21.8.109:8080 2>&1 | grep TCP_NODELAY
-...
-setsockopt(52, SOL_TCP, TCP_NODELAY, [1], 4) = 0
-...
-```
 ### nmon
 
 查看cpu 网络 内存的综合性工具
 
 <img src="../../image/1021948429.jpg" alt="example" style="zoom: 67%;" />
+
+### netdata
+
+实时监控/页面[github](https://github.com/netdata/netdata)
 
 #### dstat
 
@@ -340,6 +274,103 @@ python    9181            root    5u  IPv4 15449632      0t0  TCP localhost:3299
 | UTS      | uts_namespaces(7)    | hostname and NIS domain name                        |
 
 ---
+
+### 进程/线程分析工具
+
+#### strace
+
+正是最常用的跟踪进程系统调用的工具。
+
+`2>&1` 输出到stdout 以便于grep
+
+`$ strace -p 12280 2>&1 | grep write ` 
+
+```
+-f  开启追踪子进程和子线程Trace child processes as they are created by  currently  traced  processes`
+-T表示显示系统调用的时长，
+-tt 显示跟踪时间	
+-e [string] grep出对应字段
+-p PID
+
+
+$ strace -f wrk --latency -c 100 -t 2 --timeout 2 http://172.21.8.109:8080 2>&1 | grep TCP_NODELAY
+...
+setsockopt(52, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+...
+```
+
+#### pidstat
+
+是一个常用的进程性能分析工具，用来实时查看进程的 CPU、内存、I/O 以及上下文切换等性能指标
+
+`pidstat -wut -p XX 1`
+
+```shell
+pidstat -u 5 1 # 5秒内的cpu变化 输出一次
+pidstat -d 5 1 #              io
+13:39:51 UID PID kB_rd/s kB_wr/s kB_ccwr/s iodelay Command 
+13:39:52 102 916 0.00     4.00        0.00     0  rsyslogd
+# 还有很多options man一下吧 
+```
+
+- kB_rd/s 每秒读取的数据大小
+- kB_wr/s 每秒发出的写请求数据大小
+- kB_ccwr/s 每秒取消的写请求数据大小
+- iodelay   块I/O延迟,包括等待同步块I/O和换入块I/O结束的时间, 单位是时钟周期
+
+```
+pidstat -w 5 # 每隔5秒输出一组进程task上下文切换 Report task switching activity
+Average:      UID       PID   cswch/s nvcswch/s  Command
+Average:        0         1      0.50      0.00  systemd
+Average:        0         3      0.30      0.00  ksoftirqd/0
+Average:        0         7      0.15      0.00  migration/0
+Average:        0         9     37.16      0.00  rcu_sched
+Average:        0        11      0.25      0.00  watchdog/0
+Average:        0        12      0.25      0.00  watchdog/1
+
+pidstat -wt 1 # -t输出线程的指标 
+```
+
+- cswch(voluntary context switches) 每秒自愿上下文切换的次数
+- nvcswch(non voluntary context switches)每秒非自愿上下文切换的次数
+
+>  pidstat -u 中， %wait 表示进程等待 CPU 的时间百分比。
+>
+>  top 中 ，iowait% 则表示等待 I/O 的 CPU 时间百分比。
+>
+>  等待 CPU 的进程已经在 CPU 的就绪队列中，处于运行状态；而等待 I/O 的进程则处于不可中断状态。
+
+```shell
+-r Report page faults and memory utilization.
+$ pidstat -r 2
+Average:      UID       PID  minflt/s  majflt/s     VSZ    RSS   %MEM  Command
+Average:        0       889      7.07      0.00   19452    608   0.00  irqbalance
+Average:        0      2618      0.07      0.00   82336    756   0.00  zabbix_agentd
+Average:     3306      8834   2417.24      0.00 100633928 84807260  85.83  mysqld
+Average:      995     14632      0.07      0.00  122896  25828   0.03  node_exporter
+Average:      995     14742      2.14      0.00  118296  22471   0.02  mysqld_exporter
+
+```
+
+- minflt/s:   进程平均每秒的minor fault，这些错误不需要从磁盘获取数据  加载到 内存页。 Total number of minor faults the task has made per second, those which have **not required **loading a memory page from disk
+- majflt/s:  进程平均每s的major fault，这些错误**需要**从磁盘获取数据 加载到  内存页 Total number of major faults the task has made per second, those which have **required** loading a memory page from disk.
+
+#### pstack
+
+进程的调用栈
+
+```bash
+pstack <PID>
+cat /proc/pid/stack
+```
+
+### lsof
+
+```shell
+$ -p 列出指定进程号所打开的文件
+$ -i 列出符合条件的进程。(4 6 协议 :端口 @ip) // lsof -i :80
+docker-pr 28212 root    4u  IPv6 325852      0t0  TCP *:webmin (LISTEN)
+```
 
 ### CPU
 
@@ -658,7 +689,17 @@ $ ifconfig eth0 mtu 1500
 ```shell
 # -s 协议堆栈信息
 $ ss -tmpie
+$ ss -s
+Total: 719 (kernel 3629)
+TCP:   11954 (estab 458, closed 11432, orphaned(孤儿) 56, synrecv 0, timewait 11432/0), ports 0
 
+Transport Total     IP        IPv6
+*	  3629      -         -
+RAW	  1         0         1
+UDP	  6         4         2
+TCP	  522       519       3
+INET	  529       523       6
+FRAG	  0         0         0
 ```
 
 #### netstat
@@ -939,6 +980,10 @@ $ ab -c 1000 -n 10000 http://192.168.0.30/```
 
 https://github.com/brendangregg/FlameGraph 
 
+### trace-cmd
+
+ftrace的包装
+
 ### perf-tools
 
 `git clone --depth 1 https://github.com/brendangregg/perf-tools`
@@ -973,13 +1018,18 @@ perf top 和 perf record 加上 -g 参数，开启调用关系的采样，方便
 
 This command reads the performance data from a file and analyzes the recorded data. For further details, read the man page:
 
-```
+```shell
 $ man perf-report
 E 展开
 C 收起
 –tui   交互式的文本显示窗口
 –stdio 文本显示窗口。
 -g graph,0dj
+
+# 内存火焰图生成perf.data数据时,perf record加哪些选项吗？
+# 要加上内存管理相关的事件（函数），比如
+$ perf record -e syscalls:sys_enter_mmap -a -g -- sleep 60
+$ perf record -e page-fault 将采集事件换成 page-fault 后，就可以采集内存缺页的数据
 ```
 
 >  **指定符号路径为容器文件系统的路径**。比如对于第 05 讲的应用，你可以执行下面这个命令：
@@ -1173,6 +1223,8 @@ numactl -H
 
 # 老师的总结
 
+https://time.geekbang.org/column/article/89306
+
 ![img](../../image/596397e1d6335d2990f70427ad4b14ec.png)
 
 ![img](../../image/b0c67a7196f5ca4cc58f14f959a364ca.png)
@@ -1184,6 +1236,8 @@ numactl -H
 ![img](https://static001.geekbang.org/resource/image/52/9b/52bb55fba133401889206d02c224769b.png)
 
 ![img](https://static001.geekbang.org/resource/image/79/f8/79ad5caf0a2c105b7e9ce77877d493f8.png)
+
+注：最后一行 pcstat 的源码链接为 https://github.com/tobert/pcstat
 
 ![img](https://static001.geekbang.org/resource/image/c2/a3/c232dcb4185f7b7ba95c126889cf6fa3.png)
 

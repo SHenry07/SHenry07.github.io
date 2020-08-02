@@ -6,11 +6,21 @@
 
 > 节选自: https://www.ibm.com/developerworks/cn/linux/l-cn-perf1/index.html
 
+# 神器
+
+http://www.brendangregg.com/linuxperf.html
+
 # 学习方式
 
 只要你了解少数几个系统组件的基本原理和协作方式，掌握基本的性能指标和工具，学会实际工作中性能优化的常用技巧，你就已经可以准确分析和优化大多数的性能问题了。在这个认知的基础上，再反过来去阅读那些经典的操作系统或者其它图书，你才能事半功倍。
 
+
+
 ## 前置知识
+
+>  **终极前置知识**
+> 要了解内核函数的含义，最好的方法，就是去查询所用内核版本的源代码。
+>  这里，我推荐 [https://elixir.bootlin.com](https://elixir.bootlin.com/) 这个网站。
 
 1. 不需要了解所有组件的实现细节，只要能理解他们的基本工作方式和写作原理
 
@@ -65,3 +75,49 @@
 - 磁盘I/O性能
 - 内存性能
 - 网络性能
+
+# 总结
+
+## 书单推荐：性能优化和Linux 系统原理
+
+Linux 基础入门书籍：《鸟哥的 Linux 私房菜》
+
+计算机原理书籍：《深入理解计算机系统》
+
+Linux 编程书籍：《Linux 程序设计》和《UNIX 环境高级编程》
+
+Linux 内核书籍：《深入 Linux 内核架构》
+
+性能优化书籍：《性能之巅：洞悉系统、企业与云计算》
+
+## 书单推荐：网络原理和 Linux 内核实现
+
+计算机网络经典教材《计算机网络（第 5 版）》
+
+网络协议必读书籍《TCP/IP 详解 卷 1：协议》
+
+Wireshark 书籍《Wireshark 网络分析就这么简单》和《Wireshark 网络分析的艺术》
+
+网络编程书籍《UNIX 网络编程》
+
+Linux 内核书籍：《深入 Linux 内核架构》
+
+## 内核函数
+
+要了解内核函数的含义，最好的方法，就是去查询所用内核版本的源代码。
+这里，我推荐 [https://elixir.bootlin.com](https://elixir.bootlin.com/) 这个网站。
+
+## eBPF
+对于 eBPF 来说，除了可以通过内核源码来了解，我更推荐你从 BPF Compiler Collection (BCC) 这个项目开始。BCC 提供了很多短小的示例，可以帮你快速了解 eBPF 的工作原理，并熟悉 eBPF 程序的开发思路。了解这些基本的用法后，再去深入 eBPF 的内部，就会轻松很多。
+
+# REFERENCE
+
+TalkGo读书会笔记（TalkGo 读书会第一期：Linux 性能优化实战 by 倪朋飞）
+
+[项目文档——石墨文档](https://shimo.im/sheets/1lq7MgXnBphdeWAe/MODOC)
+
+[TalkGo 读书会第一期——帖子](https://talkgo.org/t/topic/136)
+
+[Linux性能优化实战——极客专栏](https://time.geekbang.org/column/intro/140)
+
+[启动会slide](https://docs.google.com/presentation/d/16cNCT1aqSsuVA-TPep81NGFlYIM2AO9LPFoZgA1776Y/edit?usp=sharing)
