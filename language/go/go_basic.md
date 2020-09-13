@@ -246,6 +246,44 @@ func main() {
 
 **defer 仅在函数返回时才会执行，在循环的结尾或其他一些有限范围的代码内不会执行。**
 
+```go
+package main
+
+import (
+	"fmt"
+)
+
+func test1() (i int) {
+	i = 10
+	defer func(k *int) {
+		*k += 5
+	}(&i)
+	return i // return 100
+}
+func test2() int {
+	i := 10
+	defer func(k *int) {
+		*k += 5
+	}(&i)
+	return i // return 100
+}
+func main() {
+	fmt.Println(test1())
+	fmt.Println(test2())
+}
+// 15 //105
+// 10 //100
+```
+
+```
+不同地方在于: 第一个的返回的是i 的值, defer执行后，把i值返回， 第二个是返回return statment里的值，虽然defer最后执行，但值先于defer返回了。试试把 两个函数的 return i 改为 return 100。 会更好理解吧。
+
+主要的区别就是在栈上的位置,i的初始位置就是返回值位置,所以在函数内引用的是返回值的地址。
+后者则是在函数栈中声明,所以在返回先,会先将i读取出来,将其插入返回值的位置,再调用defer return
+```
+
+
+
 ### **基本类型type**
 
 Go 的基本类型有
@@ -1836,6 +1874,8 @@ teardown拆解环境
 # go 的命令行操作
 
 1. 只要在代码集中执行 go vet，就可以发现所有的无标签的语法
+
+即编译时错误，比如`fmt.Printf("%d",str)`, 锁是否出现复制
 
 2. `go test`
 
