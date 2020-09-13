@@ -72,15 +72,65 @@
 
 - 当套接字处于连接状态（Established）时，
 
-  - Recv-Q 表示套接字缓冲还没有被应用程序取走的字节数（即接收队列长度
-- Send-Q 表示还没有被远端主机确认的字节数（即发送队列长度）
+  - Recv-Q 表示套接字缓冲还没有被应用程序取走的字节数（即接收队列长度）
+  - Send-Q 表示还没有被远端主机确认的字节数（即发送队列长度）
 - 当套接字处于监听状态（Listening）时，
   - Recv-Q 表示全连接队列当前使用了多少,也就是全连接队列的当前长度。 
   - Send-Q 表示全连接队列的最大长度。
 
  >  所谓全连接，是指服务器收到了客户端的 ACK，完成了 TCP 三次握手，然后就会把这个连接挪到全连接队列中。这些全连接中的套接字，还需要被 accept() 系统调用取走，服务器才可以开始真正处理客户端的请求。
 
+## 半连接/全连接
+
+```
+net.ipv4.tcp_max_syn_backlog 半连接容量
+net.ipv4.tcp_synack_retries = 1 连接每个 SYN_RECV 时，如果失败的话，内核还会自动重试，centos默认的重试次数是 5 次。你可以执行下面的命令，将其减小为 1 次：
+```
+
+>  半连接状态不只这一个参数net.ipv4.tcp_max_syn_backlog 控制，实际是 这个，还有系统somaxcon，以及应用程序的backlog，三个一起控制的。具体可以看下相关的源码
+
+TCP SYN Cookies 也是一种专门防御 SYN Flood 攻击的方法。SYN Cookies 基于连接信息（包括源地址、源端口、目的地址、目的端口等）以及一个加密种子（如系统启动时间），计算出一个哈希值（SHA1），这个哈希值称为 cookie
+
+> 注意，开启 TCP syncookies 后，内核选项 net.ipv4.tcp_max_syn_backlog 也就无效了。
+
+`net.ipv4.tcp_syncookies = 1`
+
+**全连接队列的大小取决于：min(backlog, somaxconn) . backlog是在socket创建的时候传入的，somaxconn是一个os级别的系统参数**
+
+**半连接队列的大小取决于：max(64, /proc/sys/net/ipv4/tcp_max_syn_backlog)。 不同版本的os会有些差异**
+
+`$ netstat -s|egrep "listen|LISTEN"的溢出值一直在上升`
+
+溢出值在升高，说明全连接队列满了，而全连接队列的长度是由backlog与somaxconn决定的，为min(backlog, somaxconn)。可以通过 cat /proc/sys/net/core/somaxconn 查看参数。
+
+ >  `cat /proc/sys/net/ipv4/tcp_abort_on_overflow `
+ >
+ >  **tcp_abort_on_overflow 为0表示如果三次握手第三步的时候全连接队列满了那么server扔掉client 发过来的ack（在server端认为连接还没建立起来）**
+
 >  与全连接队列相对应的，还有一个**半连接队列**。所谓半连接是指还没有完成 TCP 三次握手的连接，连接只进行了一半。服务器收到了客户端的 SYN 包后，就会把这个连接放到半连接队列中，然后再向客户端发送 SYN+ACK 包。
+>
+>  在linux 2.2以前，backlog大小包括了半连接状态和全连接状态两种队列大小。linux 2.2以后，分离为两个backlog来分别限制半连接SYN_RCVD状态的未完成连接队列大小跟全连接ESTABLISHED状态的已完成连接队列大小。互联网上常见的TCP SYN FLOOD恶意DOS攻击方式就是用/proc/sys/net/ipv4/tcp_max_syn_backlog来控制的，可参见《[TCP洪水攻击（SYN Flood）的诊断和处理](http://tech.uc.cn/?p=1790)》。
+>
+>  在使用listen函数时，内核会根据传入参数的backlog跟系统配置参数/proc/sys/net/core/somaxconn中，二者取最小值，作为“ESTABLISHED状态之后，完成TCP连接，等待服务程序ACCEPT”的队列大小。在kernel 2.4.25之前，是写死在代码常量SOMAXCONN，默认值是128。在kernel 2.4.25之后，在配置文件/proc/sys/net/core/somaxconn (即 /etc/sysctl.conf 之类 )中可以修改。我稍微整理了流程图，如下：
+>
+>  ![tcp-sync-queue-and-accept-queue-small](D:\Dropbox\linux\image\tcp_three_handshakes.jpg)
+>
+>   ss —lntp 这个 当session处于listening中 rec-q 确定是 syn的backlog吗？ 
+>
+>  作者回复: 是的
+>
+>  自己回复：不是,Recv-Q为全连接队列当前使用了多少,send-Q才是应用的backlog，表示全队列的最长长度
+
+#### 全连接队列满了会影响半连接队列吗？
+
+TCP三次握手第一步的时候如果全连接队列满了会影响第一步drop 半连接的发生。大概流程的如下：
+
+```
+tcp_v4_do_rcv->tcp_rcv_state_process->tcp_v4_conn_request
+//如果accept backlog队列已满，且未超时的request socket的数量大于1，则丢弃当前请求  
+  if(sk_acceptq_is_full(sk) && inet_csk_reqsk_queue_yong(sk)>1)
+      goto drop;
+```
 
 ### socket优化
 
@@ -244,24 +294,6 @@ DDoS 的前身是 DoS（Denail of Service），即拒绝服务攻击
 
 DDoS（Distributed Denial of Service） 则是在 DoS 的基础上，采用了分布式架构，利用多台主机同时攻击目标主机。
 
-# 半连接/全连接
-
-```
-net.ipv4.tcp_max_syn_backlog 半连接容量
-net.ipv4.tcp_synack_retries = 1 连接每个 SYN_RECV 时，如果失败的话，内核还会自动重试，并且默认的重试次数是 5 次。你可以执行下面的命令，将其减小为 1 次：
-```
-
->  半连接状态不只这一个参数net.ipv4.tcp_max_syn_backlog 控制，实际是 这个，还有系统somaxcon，以及应用程序的backlog，三个一起控制的。具体可以看下相关的源码
-
-TCP SYN Cookies 也是一种专门防御 SYN Flood 攻击的方法。SYN Cookies 基于连接信息（包括源地址、源端口、目的地址、目的端口等）以及一个加密种子（如系统启动时间），计算出一个哈希值（SHA1），这个哈希值称为 cookie
-
-> 注意，开启 TCP syncookies 后，内核选项 net.ipv4.tcp_max_syn_backlog 也就无效了。
-
-`net.ipv4.tcp_syncookies = 1`
-
-`$ netstat -s|egrep "listen|LISTEN"的溢出值一直在上升`
-
-溢出值在升高，说明全连接队列满了，而全连接队列的长度是由backlog与somaxconn决定的，为min(backlog, somaxconn)。可以通过 cat /proc/sys/net/core/somaxconn 查看参数。
 
 # 网络延迟
 
@@ -505,3 +537,9 @@ UDP 提供了面向数据报的网络协议，它不需要网络连接，也不�
 3. 半连接状态不只这一个参数net.ipv4.tcp_max_syn_backlog 控制，实际是 这个，还有系统somaxcon，以及应用程序的backlog，三个一起控制的。具体可以看下相关的源码
 
 4. 实际上，根据 IP 地址反查域名、根据端口号反查协议名称，是很多网络工具默认的行为，而这往往会导致性能工具的工作缓慢。所以，通常，网络性能工具都会提供一个选项（比如 -n 或者 -nn），来禁止名称解析。
+
+# Reference
+
+[关于TCP 半连接队列和全连接队列](http://jm.taobao.org/2017/05/25/525-1/)
+
+[TCP SOCKET中backlog参数的用途是什么？](https://www.cnxct.com/something-about-phpfpm-s-backlog/)

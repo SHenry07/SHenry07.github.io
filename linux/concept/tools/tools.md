@@ -15,7 +15,7 @@ info 可以理解为 man 的详细版本，提供了诸如节点跳转等更强�
 
 ## 排查工具
 
-#### sysstat 
+#### sysstat
 
 包含了常用的 Linux 性能工具，用来监控和分析系统的性能。我们的案例会用到这个包的两个命令 mpstat 和 pidstat。
 
@@ -23,7 +23,7 @@ info 可以理解为 man 的详细版本，提供了诸如节点跳转等更强�
 #### mpstat 
 是一个常用的多核 CPU 性能分析工具，用来实时查看每个 CPU 的性能指标，以及所有 CPU 的平均指标。
 
-`$ mapstat -P ALL 1`
+`$ mpstat -P ALL 1`
 
 #### vmstat BUILT-IN  top之后第二选择
 
@@ -244,7 +244,7 @@ mysqld,27458 --log_bin=on --sync_binlog=1...
 └─{mysqld},28014
 ```
 
-#### nsenter
+### nsenter  分析容器问题的神器
 
 run program with namespaces of other processes
 
@@ -262,16 +262,16 @@ python    9181            root    5u  IPv4 15449632      0t0  TCP localhost:3299
 
 
 
-| 名称空间 | page                 | 隔离                                                |
-| -------- | -------------------- | --------------------------------------------------- |
-| cgroup   | cgroup_namespaces(7) | Cgroup root directory                               |
-| IPC      |                      | System V IPC, POSIX message queues 消息队列和信号量 |
-| network  |                      | Network devices,stacks, ports, etc                  |
-| mount    |                      | mount points                                        |
-| PID      |                      | process IDS                                         |
-| time     |                      | boot and monotonic clocks                           |
-| User     | user_namespaces(7)   | User and group IDS                                  |
-| UTS      | uts_namespaces(7)    | hostname and NIS domain name                        |
+| 名称空间                        | page                 | 隔离                                                         |
+| ------------------------------- | -------------------- | ------------------------------------------------------------ |
+| cgroup                          | cgroup_namespaces(7) | Cgroup root directory                                        |
+| IPC: InterProcess Communication |                      | System V IPC, POSIX message queues 消息队列和信号量          |
+| network                         |                      | Network devices,stacks, ports, etc                           |
+| mnt:mount                       |                      | mount points                                                 |
+| PID                             |                      | process IDS                                                  |
+| time                            |                      | boot and monotonic clocks                                    |
+| User                            | user_namespaces(7)   | User and group IDS                                           |
+| UTS:Unix Timesharing System     | uts_namespaces(7)    | hostname and NIS domain name (Isolating kernel and version identifiers) |
 
 ---
 
@@ -478,6 +478,7 @@ centos 7 安装https://github.com/iovisor/bcc/issues/462
 > # 自己测试简易版
 > yum install elrepo-release
 > yum --disablerepo="*" --enablerepo="elrepo-kernel" list available
+> 
 > yum --enablerepo=elrepo-kernel install kernel-lt
 > ```
 >
@@ -507,7 +508,7 @@ centos 7 安装https://github.com/iovisor/bcc/issues/462
 > #注：装新内核是占用/boot空间的，可以使用yum remove kernel-ml-4.10.11-1.el6.elrepo.x86_64方式清理不用的kernel
 > ```
 >
-> 
+> 参考: https://elrepo.org/tiki/kernel-ml
 
 ##### cachestat  cache命中情况
 
@@ -687,7 +688,12 @@ $ ifconfig eth0 mtu 1500
 查看系统中的socket的状态， 可以替换netstat
 
 ```shell
-# -s 协议堆栈信息
+# -s, --summary    Print summary statistics
+# -i, --info       Show internal TCP information.
+# -m, --memory     Show socket memory usage.
+# -e, --extended   Show detailed socket information
+# -p, --processes  Show process using socket.
+# -n, --numeric    Do not try to resolve service names.
 $ ss -tmpie
 $ ss -s
 Total: 719 (kernel 3629)
@@ -700,6 +706,7 @@ UDP	  6         4         2
 TCP	  522       519       3
 INET	  529       523       6
 FRAG	  0         0         0
+$ ss -int
 ```
 
 #### netstat
@@ -711,6 +718,9 @@ FRAG	  0         0         0
 $ netstat -nlp | head -n 3
 # -s 协议栈 统计信息 
 $ netstat -s | egrep "listen"
+[root@server ~]#  netstat -s | egrep "listen|LISTEN" 
+667399 times the listen queue of a socket overflowed
+667399 SYNs to LISTEN sockets ignored
 $ netstat -s
 Ip:
     Forwarding: 1          //开启转发
@@ -1093,6 +1103,8 @@ VMware Logs its messages to /var/log/vmkernel and not /var/log/message.
 -x 增加说明行
 Note: when attaching journalctl output to bug reports, please do not use -x.
 -e 立即跳到最后
+--since "2017-01-10" --until "2017-01-11 03:00" 
+ --until "1 hour ago" --since "20 min ago"  –since yesterday
 ```
 
 
