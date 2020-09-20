@@ -776,7 +776,7 @@ lo       65536        0      0      0 0             0      0      0      0 LRU
 
 `sar -n DEV 1` 数字1表示每隔1秒输出一组数据
 
-#### nethogs 
+#### nethogs
 
 GUI查看**进程的**BPS 吞吐量
 
@@ -1229,6 +1229,16 @@ numactl -H
 # 网络接口的网络收发情况/PPS
 /proc/net/dev  # 网络接口的PPS
 /sys/class/net/<网卡名称>/statistics/*
+# 当前socket的状态
+必须先读net下文件再去匹配socket ，  因为存在socket inode存在但是 net下无此entry
+原因: socket 未bind 或者connect
+cat /proc/[pid]/net/
+cat /proc/[pid]/
+
+https://www.kernel.org/doc/html/latest/networking/proc_net_tcp.html
+[确定socket状态] (https://gist.github.com/jkstill/5095725)
+[进程和socket的关系] (man proc) 搜索/proc/net
+[gopacket 获取速率](https://pkg.go.dev/github.com/google/gopacket)
 ```
 
 

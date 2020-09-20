@@ -1,5 +1,7 @@
 ###  L1\L2\L3 Cache 与TLB
 
+![image-20200914120423687](./cache.png)
+
 #### MMU与TLB
 
 根据wiki的解释：

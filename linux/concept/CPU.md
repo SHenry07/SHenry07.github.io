@@ -58,16 +58,26 @@
 
 Dependencies/预备知识:
 
+[system call](https://en.wikipedia.org/wiki/System_call)
+
+> System calls in most Unix-like systems are processed in kernel mode, which is accomplished by changing the processor execution mode to a more privileged one, but no process context switch is necessary
+
+[context switch](https://en.wikipedia.org/wiki/Context_switch)
+
+> Some operating systems also require a context switch to move between user mode and kernel mode tasks. The process of context switching can have a negative impact on system performance
+
 - **进程是由内核来管理和调度的**, 进程的切换只能发生在**内核态**
 - 进程的上下文,不仅包括了
   - ==用户空间的资源==: **虚拟内存, 栈,全局变量,正文,数据等**, 
   - ==内核空间的资源==:**内核堆栈,寄存器等**
+  
+  > thread/process context has multiple parts, one, directly associated with execution and is held in the CPU and certain system tables in memory that the CPU uses (e.g. page tables), and the other, which is needed for the OS, for bookkeeping (think of the various IDs, handles, special OS-specific permissions, network connections and such).
 
 进程上下文切换的过程:
 
 1. 接收到切换信号,挂起程序, 记录当前进程的虚拟内存, 栈等用户资源
 
-2. 记录当前进程的上下文(即**CPU 寄存器和程序计数器(Program Counter，PC), 当前进程的内核状态**)
+2. 记录当前进程的上下文(即**CPU 寄存器和程序计数器(Program Counter，PC == ALU 计算逻辑单元), 当前进程的内核状态**)
 
 3. 加载新任务的上下文到这些寄存器和程序计数器
 
@@ -88,20 +98,58 @@ Dependencies/预备知识:
 - 睡眠函数sleep主动挂起
 - 保证高优先级的进程运行, 
 - 硬件中断
-## 系统调用(软中断)/ 特权模式切换--> 同进程内的CPU上下文切换
+
+#### system calls 系统调用(部分命令会触发中断)/ 特权模式切换
+
+内核提供的程序接口，是应用程序和硬件设备之间的中间层
+
+```
+man 2 syscalls
+```
+
+- 文件操作类系统调用: 如打开，创建，读取，删除，修改文件
+- 进程控制类系统调用: 如创建进程，设置或获取进程属性等
+- 通信类系统调用: 创建进程间的通信连接，发送，接收信息，或其他的通信方式
+- 设备管理类系统调用: 打开、关闭和操作设备
+- 信息维护类系统调用：在用户程序和OS之间传递信息。例如，系统向用户程序传送当前时间、日期、操作系统版本号等。
+
 Linux 按照特权等级，把进程的运行空间分为内核空间和用户空间，分别对应着下图中， CPU 特权等级的 Ring 0 和 Ring 3。
 
 - 内核空间（Ring 0）具有最高权限，可以直接访问所有资源
 - 用户空间（Ring 3）只能访问受限资源，不能直接访问内存等硬件设备，必须通过系统调用陷入到内核中，才能访问这些特权资源
   ![img](https://static001.geekbang.org/resource/image/4d/a7/4d3f622f272c49132ecb9760310ce1a7.png)
 
-进程既可以在用户空间运行，又可以在内核空间中运行。进程在用户空间运行时，被称为**进程的用户态**，而陷入内核空间的时候，被称为**进程的内核态**。从用户态到内核态的转变，需要通过**系统调用**来完成。比如，当我们查看文件内容时，就需要多次系统调用来完成：首先调用 open() 打开文件，然后调用 read() 读取文件内容，并调用 write() 将内容写到标准输出，最后再调用 close() 关闭文件。那么，系统调用的过程有没有发生 CPU 上下文的切换呢？答案自然是肯定的。CPU 寄存器里原来用户态的指令位置，需要先保存起来。接着，为了执行内核态代码，CPU 寄存器需要更新为内核态指令的新位置。最后才是跳转到内核态运行内核任务。而系统调用结束后，CPU 寄存器需要恢复原来保存的用户态，然后再切换到用户空间，继续运行进程。所以，一次系统调用的过程，其实是**发生了两次 CPU 上下文切换**。不过，需要注意的是，系统调用过程中，并不会涉及到虚拟内存等进程用户态的资源，也不会切换进程。这跟我们通常所说的进程上下文切换是不一样的：
+进程既可以在用户空间运行，又可以在内核空间中运行。进程在用户空间运行时，被称为**进程的用户态**，而陷入内核空间的时候，被称为**进程的内核态**。从用户态到内核态的转变，需要通过**系统调用**来完成。比如，当我们查看文件内容时，就需要多次系统调用来完成：首先调用 open() 打开文件，然后调用 read() 读取文件内容，并调用 write() 将内容写到标准输出，最后再调用 close() 关闭文件。那么，系统调用的过程有没有发生 CPU 上下文的切换呢？答案自然是肯定的。CPU 寄存器里原来用户态的指令位置，需要先保存起来。接着，为了执行内核态代码，CPU 寄存器需要更新为内核态指令的新位置。最后才是跳转到内核态运行内核任务。而系统调用结束后，CPU 寄存器需要恢复原来保存的用户态，然后再切换到用户空间，继续运行进程。所以，一次系统调用的过程，其实是**发生了两次 CPU 上下文切换**。不过，**需要注意的是，系统调用过程中，并不会涉及到虚拟内存等进程用户态的资源，也不会切换进程。**这跟我们通常所说的进程上下文切换是不一样的：
 
 - 进程上下文切换，是指从一个进程切换到另一个进程运行。
 
 - 而系统调用过程中一直是同一个进程在运行。
 
 所以，系统调用过程通常称为**特权模式切换**，而不是上下文切换。但实际上，**系统调用过程中，CPU 的上下文切换还是无法避免的。**
+
+
+
+##### 系统调用会引起CPU上下文切换吗？
+
+会
+
+##### 系统调用会引起进程上下文切换吗？
+
+不一定
+
+###### 要明确系统调用的目的/系统调用的函数的作用
+
+解释: 调用系统调用就是为了切换进程,那自然就会引起context switch
+
+例子1: 示例场景中有两个并发的进程,shell进程和hello进程,最开始只有shell进程在运行,即等待命令行上的输入. 当我们让它运行hello程序时,shell通过调用一个专门的函数,即**系统调用**,来执行我们的请求,系统调用会将控制权传递给操作系统, 操作系统保存shell进程的上下文,创建一个新的hell进程及其上下文,然后将控制权传给新的hello进程, hello进程终止后,操作系统恢复shell进程的上下文, 并将控制权传回给它.csappP12
+
+例子二: 一个用于获取系统时间的 system call 
+
+There's not much of context switch in here, only what's needed for the transition between the modes, user and kernel. [详见](https://github.com/Talk-Go-CSAPP-05/Discusion/issues/5#issuecomment-692029936)
+
+## Context switch
+
+
 ### 线程上下文切换
 
 线程与进程最大的区别在于，**线程是调度的基本单位，而进程则是资源拥有的基本单位**。说白了，所谓内核中的任务调度，实际上的调度对象是线程；而进程只是给线程提供了虚拟内存、全局变量等资源。所以，对于线程和进程，我们可以这么理解：
@@ -122,6 +170,10 @@ Linux 按照特权等级，把进程的运行空间分为内核空间和用户�
 `watch -d cat /proc/interrupts` 提供了一个只读的中断使用情况
 
 变化速度最快的是重调度中断（RES），这个中断类型表示，唤醒空闲状态的 CPU 来调度新的任务运行。这是多处理器系统（SMP）中，调度器用来分散任务到不同 CPU 的机制，通常也被称为处理器间中断（Inter-Processor Interrupts，IPI）。当它对应的值变化很快时，说明存在过多的任务要调度，CPU 资源可能紧张。
+
+### 性能问题
+
+Context switching itself has a cost in performance, due to running the [task scheduler](https://en.wikipedia.org/wiki/Scheduling_(computing)), TLB flushes, and indirectly due to sharing the [CPU cache](https://en.wikipedia.org/wiki/CPU_cache) between multiple tasks.[[4\]](https://en.wikipedia.org/wiki/Context_switch#cite_note-4) Switching between threads of a single process can be faster than between two separate processes, because threads share the same [virtual memory](https://en.wikipedia.org/wiki/Virtual_memory) maps, so a TLB flush is not necessary.[[5\]](https://en.wikipedia.org/wiki/Context_switch#cite_note-5)
 
 # CPU使用率 --更直观的指标
 
@@ -235,7 +287,10 @@ s 表示这个进程是一个会话的领导进程，而 + 表示前台进程组
 
 1. 上半部用来快速处理中断，它在**中断禁止模式**下运行，主要处理跟硬件紧密相关的或时间敏感的工作。==硬中断==
 
+   硬中断会切换存储的所有资源hardware context switching stores nearly all registers whether they are required or not.
+
 2. 下半部用来延迟处理上半部未完成的工作，通常以**内核线程**的方式运行。==软中断==
+   软中断只会加载存储他们需要的资源software context switching can be selective and store only those registers that need storin
 
    > 下半部中每个 CPU 都对应一个软中断内核线程，名字为 “ksoftirqd/CPU 编号”
 
