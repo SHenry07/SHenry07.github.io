@@ -294,7 +294,7 @@ bool
 string
 // A string may be empty, but not nil. Values of string type are immutable.不可变的
 
-//带符号:  首位0 表示- 1表示+ 
+//带符号:  首位0 表示权重weight为- 1表示权重weight为+ 
 int  int8  int16  int32  int64
 	 -128~127 -32768~32767
 //无符号:
@@ -593,9 +593,24 @@ c := 1 << 2 0000 0001 << 0000 0100 = 4
 
    A-F不区分大小写
 
-   ![image-20200326160357579](image-20200326160357579.png)
+   **在计算机计算的时候都是以补码的方式来运算的，尤其是无符号数时**
 
-   ![image-20200326161125467](image-20200326161125467.png)
+   补码转换十进制的方法:
+   $$
+   B2Tw(\mathop{{x}}\limits^{{\to}})
+   =−x\mathop{{}}\nolimits_{{w−1}}2\mathop{{}}\nolimits^{{w−1}} +\mathop{\sum}\limits_{{i=0}}^
+   {{w−2}} \mathop{{x}}\nolimits_{{4}}\mathop{{2}}\nolimits^{{i}}
+   $$
+   
+   $$
+   B2T4([1011]) =− 1*2^3+0*2^2+1*2^1+1*2^0 =−8 + 0+2+1 =−5
+   $$
+   
+   
+   
+   [image-20200326160357579](image-20200326160357579.png)
+   
+   [image-20200326161125467](image-20200326161125467.png)
 
 ## type的用法
 

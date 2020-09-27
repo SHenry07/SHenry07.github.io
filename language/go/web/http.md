@@ -11,8 +11,10 @@ type Handler interface {
 }
 ```
 
+![img](./3.3.illustrator.png)
 
 # 第一种 自己实现handler 更灵活些
+
 ```go
 type Handler interface {
 	ServeHTTP(ResponseWriter, *Request)
@@ -84,7 +86,7 @@ func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request) {
 }
 ```
 
-自动给 `f` 函数添加了 `HandlerFunc` 这个壳，最终调用的还是 `ServerHTTP`，只不过会直接使用 `f(w, r)`。这样封装的好处是：使用者可以专注于业务逻辑的编写，省去了很多重复的代码处理逻辑。如果只是简单的 Handler，会直接使用函数；如果是需要传递更多信息或者有复杂的操作，会使用上部分的方法。
+将函数 `f` 强制转化为 `HandlerFunc`类型 ，这个类型默认就实现了`ServeHTTP`这个interface，这样f就拥有了ServeHTTP方法。`DefaultServeMux`路由器里面就创建并存储了相应的路由规则。这样封装的好处是：使用者可以专注于业务逻辑的编写，省去了很多重复的代码处理逻辑。如果只是简单的 Handler，会直接使用函数；如果是需要传递更多信息或者有复杂的操作，会使用上部分的方法。
 
 如果需要我们自己写的话，是这样的：
 
@@ -203,7 +205,33 @@ func main() {
 }
 ```
 
-# 第四种  更深一层的serve
+# 第四种  更深一层的serve/ServeMux的完全自定义
+
+```go
+type ServeMux struct {
+	mu sync.RWMutex   //锁，由于请求涉及到并发处理，因此这里需要一个锁机制
+	m  map[string]muxEntry  // 路由规则，一个string对应一个mux实体，这里的string就是注册的路由表达式
+	hosts bool // 是否在任意的规则中带有host信息
+}
+```
+
+下面看一下muxEntry
+
+```go
+type muxEntry struct {
+	explicit bool   // 是否精确匹配
+	h        Handler // 这个路由表达式对应哪个handler
+	pattern  string  //匹配字符串
+}
+```
+
+接着看一下Handler的定义
+
+```go
+type Handler interface {
+	ServeHTTP(ResponseWriter, *Request)  // 路由实现器
+}
+```
 
 ```go
 package main 
