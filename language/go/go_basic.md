@@ -595,7 +595,7 @@ c := 1 << 2 0000 0001 << 0000 0100 = 4
 
    **在计算机计算的时候都是以补码的方式来运算的，尤其是无符号数时**
 
-   补码转换十进制的方法:
+   二进制转化补码的方法:
    $$
    B2Tw(\mathop{{x}}\limits^{{\to}})
    =−x\mathop{{}}\nolimits_{{w−1}}2\mathop{{}}\nolimits^{{w−1}} +\mathop{\sum}\limits_{{i=0}}^
@@ -608,9 +608,9 @@ c := 1 << 2 0000 0001 << 0000 0100 = 4
    
    
    
-   [image-20200326160357579](image-20200326160357579.png)
+   [image-20200326160357579](./image-20200326160357579.png)
    
-   [image-20200326161125467](image-20200326161125467.png)
+   [image-20200326161125467](./image-20200326161125467.png)
 
 ## type的用法
 
@@ -1907,7 +1907,10 @@ teardown拆解环境
    go test -bench=Split -benchmem
    ```
 
-   
+
+### 怎么得到 Go程序的汇编代码
+
+https://colobu.com/2018/12/29/get-assembly-output-for-go-programs/
 
 # 经典应用
 
