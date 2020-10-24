@@ -250,6 +250,8 @@ run program with namespaces of other processes
 
 ```shell
 $ PID=$(docker inspect --format {{.State.Pid}} app)
+PID=$(crictl inspect -o json  dd866972519a6 | jq .info.pid)
+
  # -i表示显示网络套接字信息
 $ nsenter --target $PID --net -- lsof -i
 COMMAND    PID            USER   FD   TYPE   DEVICE SIZE/OFF NODE NAME
@@ -707,6 +709,8 @@ TCP	  522       519       3
 INET	  529       523       6
 FRAG	  0         0         0
 $ ss -int
+$ ss -o state fin-wait-1 '( sport = :http or sport = :https )' dst 193.233.7/24
+$ ss -o state all '( sport = :30389 or sport = :30389 )' dst 10.11.40.0/23
 ```
 
 #### netstat
@@ -891,9 +895,12 @@ dnf install kernel-debuginfo-$(uname -r)
 yum install systemtap
 ```
 
-#### conntrack 
+#### conntrack
 
 查看和管理连接追踪状态
+
+`cat /proc/net/nf_conntrack`查看当前跟踪的所有conntrack条目
+
 ```
 # -L表示列表，-o表示以扩展格式显示
 $ conntrack -L -o extended | head

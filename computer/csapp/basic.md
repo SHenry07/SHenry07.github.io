@@ -446,8 +446,8 @@ Kib    Mib   Gib
 | %rbx     | callee-saved register; base pointer                          | Yes                             |
 | %rcx     | pass 4th integer argument to functions                       | No                              |
 | %rdx     | pass 3rd argument to functions, 2nd return register          | No                              |
-| %rsp     | stack point                                                  | Yes                             |
-| %rbp     | callee-saved register, frame pointer                         | Yes                             |
+| %rsp     | **stack point**                                              | Yes                             |
+| %rbp     | callee-saved register, **frame pointer**                     | Yes                             |
 | %rsi     | used to pass 2nd argument to functions                       | No                              |
 | %rdi     | used to pass 1st argument to functions                       | No                              |
 | %r10    | temp register, used for passing a function's static chain ptr | No                              |
@@ -460,7 +460,7 @@ Kib    Mib   Gib
 | -------- | ---- |
 | %rax  | 返回值，Temporary data |
 | %rbx | 被调用者保护 |
-| %rbp  | 被调用者保存|
+| %rbp  | 帧指针     被调用者保存 |
 | %rsp | 栈指针Location of runtime stack, 用来指明 run-time栈的结束位置 , used to indicate the end position in the run-time stack |
 | %rip | 程序计数器/指令指针instruction point, 当前正在执行指令的地址location of current code control point. |
 
@@ -584,10 +584,16 @@ movq %rbp, (%rsp)  Store %rbp on stack
 
 # 第四周
 
-对抗缓冲区溢出攻击
+对抗缓冲区溢出(buffer overflow)攻击
 
 1. 栈随机化
+
 2. 栈破坏检测
+
+   The instruction argument`%fs:40` is an indication that the canary value is read from memory using segmented addressing
+
+   指令参数%fs:40知名金丝雀值用 段寻址从内存中读入
+
 3. 限制可执行代码区域
 
 ### tools
@@ -606,7 +612,7 @@ gcc
 
 反汇编`objdump -d 可执行文件`
 
-#### gdb 
+#### gdb
 
 ```shell
 gdb 可执行文件
@@ -619,7 +625,9 @@ gdb 可执行文件
 (gdb) run // run
 (gdb) break XX // XX可以是printf main等
 (gdb) n // next 下一步
-(gdb) stepi 
+(gdb) stepi // 执行1条指令
+(gdb) stepi 4 // 执行4条指令
+(gdb) nexti  // 类似stepi 但以函数调用为单位
 (gdb) p $rcs // 以整数值查看寄存器里面的值 或 i registers rcx
 (gdb) tui enable / tui diable  // 开/关 windows
 (gdb) layout regs //显示通用寄存器窗口
@@ -629,7 +637,30 @@ gdb 可执行文件
 (gdb) clear number // 清楚断点 number是文件中的行号 info b 可以获取断点信息 clear 删除断点是基于行的，不是把所有的断点都删除。
 (gdb) delete [breakpoints num] [range] // delete可删除单个断点，也可删除一个断点的集合，这个集合用连续的断点号来描述。
 
- 
+设置参数
+(gdb) set args … // 设置函数运行参数
+(gdb) set args psol.txt
+
+检查数据
+(gdb) print $rax   // 以十进制输出%rax的内容
+(gdb) print /x $rax  // 以十六进制输出%rax的内容
+(gdb) print /t $rax  // 以二进制输出%rax的内容
+(gdb) print 0x100  // 输出0x100的十进制表示
+(gdb) print (char*)(0x402400) ;查看内存中字符串
+(gdb) help x
+Examine memory: x/FMT ADDRESS.
+ADDRESS is an expression for the memory address to examine.
+FMT is a repeat count followed by a format letter and a size letter.
+Format letters are o(octal), x(hex), d(decimal), u(unsigned decimal),
+  t(binary), f(float), a(address), i(instruction), c(char), s(string)
+  and z(hex, zero padded on the left).Size letters are b(byte), h(halfword), w(word), g(giant, 8 bytes).
+ (gdb) x/2g 0x7fffffffe818  检查从地址0x7ffffffe818开始的双(8字节)字
+ (gdb) x/20b multstore 检查函数multstroe 的前20个字节
+ (gdb) x/s x/s 0x402400  // 检查地址0x402400的值并以字符串形式输出
+   0x402400:       "Border relations with Canada have never been better."
+ (gdb) x ($rsp+0x10) 同上
+ (gdb) x/6c $rbx
+0x6038c0 <input_strings+320>:   97 'a'  98 'b'  99 'c'  100 'd' 101 'e' 102 'f'
 
 https://github.com/hellogcc/100-gdb-tips/blob/master/src/index.md
 ```
@@ -645,4 +676,50 @@ https://www.lanqiao.cn/courses/83
 结合第三章的内容和读书会第一期所思: 与二进制直接打交道的情况比较少，与16进制打交道比较多，如：java的进程号、进程地址都是16进制，socket的source IP  port和 dest IP port也是16进制，还有一种更加常见strace或pref所显示的调用栈更加是16进制+机器码。还有一个很典型的core文件
 
 所以以我看来 汇编带给我的更多是 运维排查方面的提高，毕竟直接使用汇编语言的场景还是很少的
+
+# 第五周
+
+第6章 存取器层次结构
+
+### 名词解释
+
+| 名词                                            | 解释                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| RAM 随机访问存储器(Random-Access Memory)        |                                                              |
+| SRAM 静态随机访问存储器                         | 高速缓存存储器，既可以在CPU芯片上，也可以在片下。采用六晶体管电路来实现, 只要有电，就会永远地保持它的值 |
+| DRAM 动态                                       | 即常见的内存，采用电容来显示，对干扰非常敏感                 |
+| DDR3 SDRAM(Double Data-Rate Synchronous DRAM)   | 双倍速率同步DRAM  使用两个时钟沿作为控制信号，从而使DRAM的速度翻倍 |
+| ROM(Read-Only Memory) 只读存储器                | 非易失性存储器                                               |
+| EEPROM(Electrically Erasable Programmable ROM)  | 电子可擦写可编程ROM                                          |
+| 总线事务(bus transaction)                       | CPU和主存之间的数据传送，分为读事务和写事务                  |
+| PCIe(Peripheral Component Interconnect express) | 外围设备互连总线，对接I/O设备                                |
+| DMA传送(Direct Memory Access transfer)          | 直接内存访问 传送                                            |
+
+### 局部性
+
+- 时间局部性
+
+- 空间局部性
+
+  | 名词                                       | 解释                                                         |
+  | ------------------------------------------ | ------------------------------------------------------------ |
+  | 顺序引用模式(sequential reference pattern) | 步长为1的引用模式(stride-1 reference pattern)， 一般而言，随着步长的增加，空间局部性下降 |
+  | cache                                      | 读作"cash"                                                   |
+  |                                            |                                                              |
+
+  存储器层次结构的中心思想是: 对于每个k, 位于k层的更快更小的存储设备作为位于k+1层的更大更慢的存储设备的缓存。换句话说，层次结构中的每一层都缓存来自较低一层的数据对象
+
+**MMU是CPU芯片的一部分，而TLB(快表)是MMU的一部分**。TLB(Translation Lookaside Buffer): 被用作地址翻译，专门用于改进虚拟地址到物理地址转换速度的缓存。**其访问速度非常快，和寄存器相当，比L1访问还快。**
+
+### 编写高速缓存友好的代码
+
+1. 让最常见的情况运行的快。
+
+   集中再核心函数里的循环上
+
+2. 尽量减小每个循环内部的缓存不命中数量
+
+   1. 对局部变量的反复引用。一旦从存储器读入一个数据对象，就尽可能多地使用它
+   2. 按照数据对象存储在内存中的顺序、以步长为1的 读数据
+   3. 多维数组进行操作的程序中，空间局部性尤其重要
 

@@ -344,6 +344,8 @@ MASQUERADE 是最常用的一种 SNAT 规则，常用来为多个内网 IP 地�
 
 问题2：NAT方式所有流量都要经过NAT服务器，所以NAT服务器本身的软中断导致CPU负载、网络流量、文件句柄、端口号上限、nf_conntrack table full都可能是性能瓶颈
 
+[云计算底层技术-netfilter框架研究](https://opengers.github.io/openstack/openstack-base-netfilter-framework-overview/)
+
 ## DNAT工作流程
 
 根据Netfilter 中，网络包的流向以及 NAT 的原理，要保证 NAT 正常工作，就至少需要两个步骤：
@@ -414,6 +416,8 @@ ipv4     2 tcp      6 7 TIME_WAIT src=192.168.0.2 dst=192.168.0.96 sport=51744 d
 ipv4     2 tcp      6 6 TIME_WAIT src=192.168.0.2 dst=192.168.0.96 sport=51524 dport=8080 src=172.17.0.2 dst=192.168.0.2 sport=8080 dport=51524 [ASSURED] mark=0 use=1
 ```
 连接跟踪表里的对象，包括了协议、连接状态、源 IP、源端口、目的 IP、目的端口、跟踪状态等。由于这个格式是固定的，所以可以用 awk、sort 等工具，对其进行统计分析。
+
+系统最大允许连接跟踪数`CONNTRACK_MAX` = `连接跟踪表大小(HASHSIZE) * Bucket大小(bucket size)`
 
 [nf_conntrack](https://www.kernel.org/doc/Documentation/networking/nf_conntrack-sysctl.txt)的文档 具有更多的配置选项，可以根据实际需求具体来配置
 
